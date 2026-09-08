@@ -1,7 +1,8 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { signSessionToken, AUTH_COOKIE_NAME } from "@/lib/auth";
 import { Role } from "@/lib/constants";
+import { MOCK_USERS } from "@/lib/mockDb";
 
 export async function POST(req: Request) {
   try {
@@ -11,10 +12,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "targetEmail is required" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: targetEmail.toLowerCase().trim() },
-      include: { providerProfile: true },
-    });
+    const cleanEmail = targetEmail.toLowerCase().trim();
+    let user: any = null;
+
+    try {
+      user = await prisma.user.findUnique({
+        where: { email: cleanEmail },
+        include: { providerProfile: true },
+      });
+    } catch (dbErr) {
+      console.warn("Database query skipped, using demo directory:", dbErr);
+    }
+
+    if (!user) {
+      user = MOCK_USERS[cleanEmail] || null;
+    }
 
     if (!user) {
       return NextResponse.json({ error: "Demo user not found" }, { status: 404 });
@@ -25,7 +37,7 @@ export async function POST(req: Request) {
       email: user.email,
       name: user.name,
       role: user.role as Role,
-      locality: user.locality,
+      locality: user.locality || "Greenwood Heights",
     });
 
     let redirectUrl = "/";
@@ -41,7 +53,7 @@ export async function POST(req: Request) {
         name: user.name,
         email: user.email,
         role: user.role,
-        locality: user.locality,
+        locality: user.locality || "Greenwood Heights",
       },
     });
 
