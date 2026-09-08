@@ -15,6 +15,12 @@ export async function middleware(request: NextRequest) {
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/register" ||
+    pathname.startsWith("/account") ||
+    pathname.startsWith("/tracking") ||
+    pathname.startsWith("/booking") ||
+    pathname.startsWith("/book") ||
+    pathname.startsWith("/services") ||
+    pathname.startsWith("/search") ||
     pathname.includes(".")
   ) {
     return NextResponse.next();

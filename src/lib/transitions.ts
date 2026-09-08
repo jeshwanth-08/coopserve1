@@ -1,4 +1,4 @@
-import { REQUEST_STATUS, RequestStatus, ROLES, Role } from "./constants";
+﻿import { REQUEST_STATUS, RequestStatus, ROLES, Role } from "./constants";
 
 export interface TransitionValidation {
   allowed: boolean;

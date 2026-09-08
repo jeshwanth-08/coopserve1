@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { Bell, Check, ExternalLink } from "lucide-react";
@@ -145,6 +145,17 @@ export default function NotificationDropdown() {
                   </div>
                 ))
               )}
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-b-xl border-t border-slate-100 text-center">
+              <Link
+                href="/notifications"
+                onClick={() => setIsOpen(false)}
+                className="text-xs font-bold text-brand-600 hover:underline flex items-center justify-center gap-1"
+              >
+                <span>View All in Notification Center</span>
+                <ExternalLink className="w-3 h-3" />
+              </Link>
             </div>
           </div>
         </>

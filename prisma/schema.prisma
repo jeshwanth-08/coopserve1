@@ -17,7 +17,8 @@ model User {
   address      String?
   locality     String           // Community / Society / Locality name
   createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  cityId       String?
+  city         City?    @relation("UserCity", fields: [cityId], references: [id])
 
   providerProfile  ProviderProfile?
   memberRequests   ServiceRequest[]   @relation("MemberRequests")
@@ -28,6 +29,8 @@ model User {
   notifications    Notification[]
   coSigns          CommunitySupport[]
   comments         RequestComment[]
+  bookings         Booking[]          @relation("BookingUser")
+  providerBookings Booking[]          @relation("BookingProvider")
 }
 
 model ProviderProfile {
@@ -127,3 +130,72 @@ model Notification {
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 }
+
+// New models for marketplace functionality
+model Service {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  category    String   // e.g., "Cleaning", "Plumbing"
+  description String
+  basePrice   Float
+  imageUrl    String?
+  tags        String?  // JSON string array for search keywords
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  offers   Offer[]
+  bookings Booking[]
+}
+
+model Booking {
+  id               String   @id @default(cuid())
+  userId           String
+  providerId       String?
+  serviceId        String
+  scheduledAt      DateTime
+  status           String   @default("PENDING") // PENDING, CONFIRMED, COMPLETED, CANCELLED
+  paymentStatus    String   @default("UNPAID") // UNPAID, PAID, REFUNDED
+  address          String
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user     User    @relation("BookingUser", fields: [userId], references: [id])
+  provider User?   @relation("BookingProvider", fields: [providerId], references: [id])
+  service  Service @relation(fields: [serviceId], references: [id])
+
+}
+
+model Offer {
+  id          String   @id @default(cuid())
+  serviceId   String
+  title       String
+  description String?
+  discountPct Float
+  validFrom   DateTime
+  validTo     DateTime
+  bannerImage String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  service Service @relation(fields: [serviceId], references: [id])
+}
+
+model Membership {
+  id          String   @id @default(cuid())
+  name        String
+  price       Float
+  benefits    String   // JSON string array describing benefits
+  activeUntil DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model City {
+  id   String @id @default(cuid())
+  name String
+  users User[] @relation("UserCity")
+}
+
