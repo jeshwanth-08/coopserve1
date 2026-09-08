@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   PlusCircle,
@@ -15,6 +15,16 @@ import {
   ShieldCheck,
   Building2,
   FileCheck2,
+  Calendar,
+  Clock,
+  Wallet,
+  HelpCircle,
+  Users,
+  Tag,
+  MapPin,
+  AlertCircle,
+  RotateCcw,
+  Megaphone,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -24,20 +34,26 @@ interface SidebarProps {
 export default function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
 
+  const effectiveRole = pathname.startsWith("/admin")
+    ? "ADMIN"
+    : pathname.startsWith("/provider")
+    ? "PROVIDER"
+    : role || "MEMBER";
+
   const getNavLinks = () => {
-    switch (role) {
+    switch (effectiveRole) {
       case "ADMIN":
         return [
           {
-            href: "/admin",
-            label: "Analytics Dashboard",
+            href: "/admin?tab=overview",
+            label: "Dashboard Analytics",
             icon: BarChart3,
-            exact: true,
           },
           {
             href: "/admin/requests",
-            label: "All Service Requests",
+            label: "View All Requests",
             icon: ClipboardList,
+            highlight: true,
           },
           {
             href: "/admin/providers",
@@ -45,28 +61,93 @@ export default function Sidebar({ role }: SidebarProps) {
             icon: ShieldCheck,
           },
           {
-            href: "/admin/members",
-            label: "Member Directory",
-            icon: Building2,
+            href: "/admin?tab=bookings",
+            label: "Bookings Management",
+            icon: Calendar,
+          },
+          {
+            href: "/admin?tab=customers",
+            label: "Customer Users",
+            icon: Users,
+          },
+          {
+            href: "/admin?tab=coupons",
+            label: "Coupons & Offers",
+            icon: Tag,
+          },
+          {
+            href: "/admin?tab=services",
+            label: "Services & Catalog",
+            icon: Wrench,
+          },
+          {
+            href: "/admin?tab=payments",
+            label: "Payments & Gateway",
+            icon: Wallet,
+          },
+          {
+            href: "/admin?tab=reviews",
+            label: "Reviews Moderation",
+            icon: Star,
+          },
+          {
+            href: "/admin?tab=complaints",
+            label: "Complaints & Disputes",
+            icon: AlertCircle,
           },
         ];
       case "PROVIDER":
         return [
           {
-            href: "/provider",
-            label: "Assigned Requests",
+            href: "/provider/requests",
+            label: "View Assigned Requests",
             icon: ClipboardList,
-            exact: true,
-          },
-          {
-            href: "/provider/profile",
-            label: "Professional Profile",
-            icon: Wrench,
+            highlight: true,
           },
           {
             href: "/provider/ratings",
-            label: "Ratings & Reviews",
+            label: "View Ratings",
             icon: Star,
+          },
+          {
+            href: "/provider?tab=overview",
+            label: "Provider Overview",
+            icon: LayoutDashboard,
+          },
+          {
+            href: "/provider?tab=today",
+            label: "Today's Jobs",
+            icon: Calendar,
+          },
+          {
+            href: "/provider?tab=earnings",
+            label: "Earnings",
+            icon: Wallet,
+          },
+          {
+            href: "/provider?tab=performance",
+            label: "Performance",
+            icon: BarChart3,
+          },
+          {
+            href: "/provider?tab=availability",
+            label: "Availability",
+            icon: Clock,
+          },
+          {
+            href: "/provider?tab=services",
+            label: "Services & Skills",
+            icon: Wrench,
+          },
+          {
+            href: "/provider?tab=profile",
+            label: "Profile",
+            icon: UserCheck,
+          },
+          {
+            href: "/provider?tab=support",
+            label: "Support",
+            icon: HelpCircle,
           },
         ];
       default: // MEMBER
@@ -99,6 +180,8 @@ export default function Sidebar({ role }: SidebarProps) {
   };
 
   const navLinks = getNavLinks();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams ? searchParams.get("tab") || "overview" : "overview";
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex md:flex-col shrink-0 min-h-[calc(100vh-4rem)]">
@@ -108,7 +191,10 @@ export default function Sidebar({ role }: SidebarProps) {
         </div>
         {navLinks.map((item) => {
           const Icon = item.icon;
-          const isActive = item.exact
+          const itemTab = item.href.includes("?tab=") ? item.href.split("?tab=")[1] : null;
+          const isActive = itemTab
+            ? (pathname === "/admin" || pathname === "/provider") && currentTab === itemTab
+            : item.exact
             ? pathname === item.href
             : pathname.startsWith(item.href);
 

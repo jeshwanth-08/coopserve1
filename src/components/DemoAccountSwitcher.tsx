@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -13,6 +13,15 @@ export const DEMO_ACCOUNTS = [
     detail: "Full system & dispatch control",
     icon: Shield,
     color: "text-purple-600 bg-purple-50 hover:bg-purple-100",
+  },
+  {
+    role: "PROVIDER",
+    label: "Professional AC Specialist",
+    name: "Rahul",
+    email: "provider1@coop.org",
+    detail: "Master AC Technician (★ 4.9)",
+    icon: Wrench,
+    color: "text-teal-600 bg-teal-50 hover:bg-teal-100",
   },
   {
     role: "PROVIDER",

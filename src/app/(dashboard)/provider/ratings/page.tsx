@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Star, MessageSquare, ThumbsUp, ShieldCheck } from "lucide-react";
