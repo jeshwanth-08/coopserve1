@@ -1,4 +1,4 @@
-﻿# dependencies
+# dependencies
 node_modules
 .pnp
 .pnp.js
@@ -13,5 +13,4 @@ out/
 .env*.local
 # vercel
 .vercel
-dev.db
-.vercel
+
