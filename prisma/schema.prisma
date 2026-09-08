@@ -1,0 +1,129 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String           @id @default(cuid())
+  name         String
+  email        String           @unique
+  passwordHash String
+  role         String           // "MEMBER" | "PROVIDER" | "ADMIN"
+  phone        String?
+  address      String?
+  locality     String           // Community / Society / Locality name
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  providerProfile  ProviderProfile?
+  memberRequests   ServiceRequest[]   @relation("MemberRequests")
+  assignedRequests ServiceRequest[]   @relation("ProviderRequests")
+  statusChanges    StatusHistory[]    @relation("UserStatusChanges")
+  ratingsGiven     Rating[]           @relation("MemberRatings")
+  ratingsReceived  Rating[]           @relation("ProviderRatings")
+  notifications    Notification[]
+  coSigns          CommunitySupport[]
+  comments         RequestComment[]
+}
+
+model ProviderProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills            String   // JSON string array e.g. ["Electrical Wiring", "Circuit Breakers", "Inverters"]
+  serviceCategories String   // JSON string array e.g. ["Electrician", "Appliance Repair"]
+  certifications    String   // JSON string array of certificate names/links
+  serviceArea       String   // Locality or radius served
+  isVerified        Boolean  @default(false)
+  isActive          Boolean  @default(true)
+  avgRating         Float    @default(0.0)
+  totalReviews      Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model ServiceRequest {
+  id                 String             @id @default(cuid())
+  memberId           String
+  member             User               @relation("MemberRequests", fields: [memberId], references: [id])
+  category           String             // Electrician, Plumber, Carpenter, Painter, Cleaner, Gardener, etc.
+  description        String
+  visibility         String             @default("PERSONAL") // "PERSONAL" | "COMMUNITY"
+  locality           String
+  address            String
+  isEmergency        Boolean            @default(false)
+  preferredDateTime  DateTime?
+  status             String             @default("PENDING") // PENDING, ASSIGNED, ACCEPTED, ON_THE_WAY, IN_PROGRESS, RESOLVED, DECLINED, CANCELLED
+  assignedProviderId String?
+  assignedProvider   User?              @relation("ProviderRequests", fields: [assignedProviderId], references: [id])
+  completionNotes    String?
+  completionPhotos   String?            // JSON string array of photo paths
+  resolvedAt         DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  statusHistory      StatusHistory[]
+  rating             Rating?
+  coSigns            CommunitySupport[]
+  comments           RequestComment[]
+}
+
+model StatusHistory {
+  id          String         @id @default(cuid())
+  requestId   String
+  request     ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  status      String
+  changedById String
+  changedBy   User           @relation("UserStatusChanges", fields: [changedById], references: [id])
+  changedAt   DateTime       @default(now())
+  note        String?
+}
+
+model Rating {
+  id         String         @id @default(cuid())
+  requestId  String         @unique
+  request    ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  memberId   String
+  member     User           @relation("MemberRatings", fields: [memberId], references: [id])
+  providerId String
+  provider   User           @relation("ProviderRatings", fields: [providerId], references: [id])
+  stars      Int            // 1 - 5
+  comment    String?
+  createdAt  DateTime       @default(now())
+}
+
+model CommunitySupport {
+  id        String         @id @default(cuid())
+  requestId String
+  request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+
+  @@unique([requestId, userId])
+}
+
+model RequestComment {
+  id        String         @id @default(cuid())
+  requestId String
+  request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   String
+  createdAt DateTime       @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // BOOKING_CONFIRMED, ASSIGNED, STATUS_CHANGE, COMMUNITY_ALERT, REVIEW_SUBMITTED
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
