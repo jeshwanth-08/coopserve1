@@ -20,10 +20,15 @@ import {
   Navigation,
   Check,
   RotateCcw,
+  CreditCard,
+  FileText,
 } from "lucide-react";
 import Navbar from "@/components/home/Navbar";
 import Footer from "@/components/home/Footer";
 import { getBookingById, BookingRecord } from "@/lib/bookingService";
+import PayAfterServiceModal from "@/components/payment/PayAfterServiceModal";
+import InvoiceModal from "@/components/payment/InvoiceModal";
+import { CoopInvoice } from "@/lib/paymentService";
 
 export default function TrackingPage() {
   const params = useParams();
@@ -49,6 +54,19 @@ export default function TrackingPage() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
+  // Digital Payment & Invoice state
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [activeInvoice, setActiveInvoice] = useState<CoopInvoice | null>(null);
+  const [isPaid, setIsPaid] = useState(false);
+
+  const handlePaymentSuccess = (invoice: CoopInvoice) => {
+    setActiveInvoice(invoice);
+    setIsPaid(true);
+    setIsPayModalOpen(false);
+    setIsInvoiceModalOpen(true);
+  };
 
   useEffect(() => {
     const loaded = getBookingById(bookingId);
@@ -386,6 +404,68 @@ export default function TrackingPage() {
               </div>
             </div>
 
+            {/* Pay After Service Card (Stage 6) */}
+            {currentStepIndex === 5 && (
+              <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-brand-500/10 border-2 border-emerald-300 text-slate-900 space-y-4 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-xl shadow-md shadow-emerald-600/30">
+                      ₹
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-base font-black text-slate-900">
+                          {isPaid ? "Payment Complete & Disbursed" : "Pay After Service Completion"}
+                        </h4>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${
+                          isPaid ? "bg-emerald-100 text-emerald-800" : "bg-brand-100 text-brand-800"
+                        }`}>
+                          {isPaid ? "Paid ✓" : "Pay Now"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        {isPaid
+                          ? "Official tax invoice generated. Worker share credited instantly via DBT."
+                          : "Job inspected & verified. Pay securely via UPI, Cards, Net Banking, or Cash."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {isPaid ? (
+                    <button
+                      onClick={() => setIsInvoiceModalOpen(true)}
+                      className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-600/20 self-start sm:self-auto shrink-0"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>View &amp; Download Invoice</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setIsPayModalOpen(true)}
+                      className="px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-brand-500/30 self-start sm:self-auto shrink-0 active:scale-95"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      <span>Pay ₹{booking.priceBreakdown.total} Online</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Fair Cooperative Split Highlight */}
+                <div className="p-3 bg-white/90 rounded-2xl border border-emerald-200 text-xs flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="font-bold text-emerald-950">Cooperative Split:</span>
+                    <span className="text-slate-600">
+                      ₹{Math.round(booking.priceBreakdown.total * 0.9)} to {booking.assignedPro.name} (90%) &bull; ₹{Math.round(booking.priceBreakdown.total * 0.1)} to Co-op Welfare Fund (10%)
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                    Zero Surcharge &bull; 100% Transparent
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Review Box if Stage 6 (Completed) */}
             {currentStepIndex === 5 && !reviewSubmitted && (
               <div className="p-6 rounded-3xl bg-amber-50 border border-amber-200 text-slate-900 space-y-3">
@@ -700,6 +780,27 @@ export default function TrackingPage() {
           </div>
         </div>
       )}
+
+      {/* Pay After Service Modal */}
+      <PayAfterServiceModal
+        isOpen={isPayModalOpen}
+        onClose={() => setIsPayModalOpen(false)}
+        orderId={booking.id}
+        serviceName={booking.service.name}
+        workerName={booking.assignedPro.name}
+        workerTrade={booking.assignedPro.role}
+        amount={booking.priceBreakdown.total}
+        customerName="Rahul Sharma"
+        address={booking.address}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
+
+      {/* Downloadable PDF / Printable Invoice Modal */}
+      <InvoiceModal
+        isOpen={isInvoiceModalOpen}
+        onClose={() => setIsInvoiceModalOpen(false)}
+        invoice={activeInvoice}
+      />
 
       <Footer />
     </div>
