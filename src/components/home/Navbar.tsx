@@ -128,23 +128,13 @@ export default function Navbar({
           <div className="flex items-center justify-between h-16 gap-3 lg:gap-4">
             {/* Left: Brand Logo & Navigation Bar Links (aligned from the left starting from the logo) */}
             <div className="flex items-center gap-3 lg:gap-5 flex-1 min-w-0">
-              <Link href="/" className="flex items-center gap-2 group shrink-0">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-brand-500/25 group-hover:scale-105 transition-transform">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1">
-                    <span className="font-extrabold text-xl tracking-tight text-slate-900 group-hover:text-brand-600 transition-colors">
-                      Coop<span className="text-brand-600">Serve</span>
-                    </span>
-                    <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
-                      Pro
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-slate-500 font-medium -mt-1 hidden sm:block">
-                    Your home. Taken care of.
-                  </span>
-                </div>
+              <Link href="/" className="flex items-center gap-2 group shrink-0 py-1" title="CoopServe - Collaborative Service & Community">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo.png"
+                  alt="CoopServe - Collaborative Service & Community"
+                  className="h-10 sm:h-11 w-auto object-contain transition-transform group-hover:scale-105"
+                />
               </Link>
 
               {/* Primary Navigation Links starting directly from the logo */}

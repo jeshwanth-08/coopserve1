@@ -89,14 +89,16 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/30 mb-4">
-          <Users className="w-8 h-8" />
-        </div>
-        <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          CoopServe
-        </h2>
-        <p className="mt-1.5 text-sm text-slate-600">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center flex flex-col items-center">
+        <Link href="/" className="inline-block transition-transform hover:scale-105 mb-2" title="CoopServe Home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="CoopServe Logo"
+            className="h-14 w-auto object-contain mx-auto"
+          />
+        </Link>
+        <p className="mt-1 text-xs text-slate-500 font-medium">
           Community-driven request and dispatch system
         </p>
       </div>

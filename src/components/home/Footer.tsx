@@ -22,18 +22,13 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 border-b border-slate-800/80 pb-12">
           {/* Brand Info */}
           <div className="lg:col-span-2 space-y-4">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-brand-500/25">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-extrabold text-xl tracking-tight text-white">
-                  Coop<span className="text-brand-400">Serve</span>
-                </span>
-                <span className="text-[11px] text-slate-400 font-medium -mt-1">
-                  Your home. Taken care of.
-                </span>
-              </div>
+            <Link href="/" className="inline-block bg-white rounded-2xl px-4 py-2.5 shadow-md group transition-transform hover:scale-105" title="CoopServe - Collaborative Service & Community">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.png"
+                alt="CoopServe - Collaborative Service & Community"
+                className="h-10 w-auto object-contain"
+              />
             </Link>
 
             <p className="text-slate-400 leading-relaxed max-w-sm">

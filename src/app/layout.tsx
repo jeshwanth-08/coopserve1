@@ -7,6 +7,11 @@ import { LanguageProvider } from "@/lib/i18nContext";
 export const metadata: Metadata = {
   title: "CoopServe - Professional Home Services & Maintenance",
   description: "Community-driven service request and dispatch platform for household and local services",
+  icons: {
+    icon: "/logo-icon.png",
+    shortcut: "/logo-icon.png",
+    apple: "/icon-192.png",
+  },
 };
 
 export default function RootLayout({

@@ -77,9 +77,17 @@ export default function AppDownloadPage() {
         <div className="absolute -left-20 -bottom-20 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-6xl mx-auto relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-cyan-200 text-xs font-bold border border-white/15 mb-4">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
-            <span>SIH 2026 Mobile Ecosystem • Version 2.4.0</span>
+          <div className="flex items-center gap-3 mb-5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-icon.png"
+              alt="CoopServe Emblem"
+              className="w-12 h-12 object-contain bg-white rounded-2xl p-1.5 shadow-lg shrink-0"
+            />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-cyan-200 text-xs font-bold border border-white/15">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+              <span>SIH 2026 Mobile Ecosystem • Version 2.4.0</span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
