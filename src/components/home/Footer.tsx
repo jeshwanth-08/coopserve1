@@ -131,14 +131,22 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5">
               <li>
-                <Link href="/support" className="hover:text-white transition-colors block">
-                  Help Center
-                </Link>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent("open-support-chat"))}
+                  className="hover:text-white transition-colors block text-left"
+                >
+                  24/7 AI Help Center
+                </button>
               </li>
               <li>
-                <Link href="/support" className="hover:text-white transition-colors block">
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent("open-support-chat"))}
+                  className="hover:text-white transition-colors block text-left"
+                >
                   Raise Support Ticket
-                </Link>
+                </button>
               </li>
               <li>
                 <Link href="/notifications" className="hover:text-white transition-colors block">

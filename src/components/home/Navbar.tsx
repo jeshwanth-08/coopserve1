@@ -24,9 +24,9 @@ import {
   Package,
   LogOut,
   Bell,
-  Camera,
   Download,
   HeartHandshake,
+  Headphones,
 } from "lucide-react";
 import { INDIAN_CITIES } from "@/lib/homeData";
 import LocationSelectorModal from "@/components/location/LocationSelectorModal";
@@ -187,16 +187,6 @@ export default function Navbar({
                 >
                   <Crown className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
                   <span>VIP</span>
-                </Link>
-
-                {/* 24/7 Support Hub */}
-                <Link
-                  href="/support"
-                  className="flex items-center gap-1 xl:gap-1.5 h-9 px-2 xl:px-3 rounded-xl text-xs font-semibold text-slate-700 hover:text-brand-600 hover:bg-slate-50 transition-colors shrink-0"
-                  title="Help & Support Hub"
-                >
-                  <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{t("nav.support", "Support")}</span>
                 </Link>
               </nav>
             </div>
@@ -496,14 +486,17 @@ export default function Navbar({
               >
                 CoopServe Plus VIP Membership
               </a>
-              <Link
-                href="/support"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50 rounded-lg"
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  window.dispatchEvent(new CustomEvent("open-support-chat"));
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50 rounded-lg text-left"
               >
-                <HelpCircle className="w-3.5 h-3.5 text-brand-600" />
-                <span>{t("nav.support", "24/7 Help & Support Center")}</span>
-              </Link>
+                <Headphones className="w-3.5 h-3.5 text-brand-600" />
+                <span>24/7 AI Customer Support</span>
+              </button>
             </div>
           </div>
         )}

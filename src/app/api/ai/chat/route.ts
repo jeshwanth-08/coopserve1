@@ -80,9 +80,12 @@ async function callGemini(message: string, apiKey: string) {
     (p) => `${p.name} (${p.role})`
   ).join(", ");
 
-  const systemInstruction = `You are "Home Buddy", an exceptionally intelligent, friendly, and helpful AI assistant for CoopServe (a neighborhood cooperative home services platform), powered by modern LLM intelligence like Gemini and GPT.
+  const systemInstruction = `You are "CoopServe AI Support & Home Buddy", the official 24/7 Customer Support representative and intelligent home maintenance concierge for CoopServe (a neighborhood cooperative home services platform), powered by modern LLM intelligence.
 
 CAPABILITIES:
+- 24/7 CUSTOMER SUPPORT: You handle all customer inquiries, booking assistance, rescheduling, cancellation/refund policies, 30-day rework guarantees, complaints, and ticket escalations.
+- Cooperative Helpline: 1800-266-7788 (Toll-Free, 24/7) | Official Email: help@coopserve.in.
+- If the user complains, reports a delay or poor service, generate a ticket reference like #TIC-8492 and assure immediate district coordinator intervention under our 30-day rework warranty.
 - You can answer ANY question the user asks — home maintenance, appliances, electrical, plumbing, carpentry, DIY repairs, cleaning, pest control, safety, energy saving, platform questions, general knowledge, science, tips, or friendly conversation.
 - Answer thoroughly, clearly, and conversationally with well-structured formatting, bullet points, and actionable tips.
 
@@ -176,8 +179,9 @@ async function callOpenAI(message: string, apiKey: string) {
     (s) => `${s.id}: ${s.name} (${s.category}) - ₹${s.price}`
   ).join(", ");
 
-  const systemPrompt = `You are "Home Buddy", the elite AI concierge for CoopServe.
+  const systemPrompt = `You are "CoopServe AI Support & Home Buddy", the elite 24/7 Customer Support representative and home maintenance concierge for CoopServe.
 Answer ANY query intelligently, thoroughly, and helpfully like ChatGPT.
+Handle all customer service issues: bookings, cancellations, refunds, warranties (30-day rework warranty), complaints (generate a ticket ID like #TIC-8492), helpline 1800-266-7788 / help@coopserve.in.
 Washing machines are "Appliance Repair" (svc-6), NOT AC.
 Output strict JSON with fields: text, diagnosticPoints (array, optional), safetyTip (optional), recommendedService (id, name, price, duration, url, optional), action (label, url, optional).
 Catalog: ${serviceCatalogSummary}`;
@@ -220,26 +224,75 @@ function runSmartDiagnosticEngine(query: string) {
   // 1. Greetings, Identity & General Chit-Chat
   if (matches(/^(hi|hello|hey|greetings|good\s*(morning|afternoon|evening)|namaste)\b/)) {
     return {
-      text: "Hello! 👋 I'm Home Buddy, your 24/7 AI home maintenance and diagnostic assistant.\n\nYou can ask me anything — from diagnosing a noisy washing machine, AC cooling issues, or electrical trips, to DIY cleaning tips, home improvements, and booking certified cooperative professionals!",
+      text: "Hello! 👋 I'm your CoopServe 24/7 AI Customer Support & Maintenance Concierge.\n\nI can help you with anything — raising a support ticket, tracking your technician, booking cancellations & refunds, DIY repair troubleshooting, or dispatching certified cooperative professionals!",
       diagnosticPoints: [
-        "Ask about any home repair: 'washing machine not spinning', 'leaking faucet', 'MCB tripping'.",
-        "Ask DIY questions: 'how to remove hard water stains', 'how to lower my AC power bill'.",
-        "Ask about CoopServe: 'how to book', 'what are the prices', 'HOME+ membership'.",
+        "🎧 Need Customer Support? Ask 'Raise a ticket', 'Talk to coordinator', or call 1800-266-7788.",
+        "📦 Need to track your booking? Ask 'Where is my pro?' or 'Track my service'.",
+        "📸 Defect diagnosis: Tap the 📸 Camera button to diagnose issues directly from a photo.",
       ],
       action: {
-        label: "Explore All 20 Services",
+        label: "View All 20 Services",
         url: "/services",
+      },
+    };
+  }
+
+  // 2. Official 24/7 Customer Support, Helpline & Ticketing
+  if (matches(/\b(support|customer\s*care|help\s*desk|helpline|human|agent|talk\s*to\s*(someone|agent|person|human|coordinator)|customer\s*support|contact\s*support)\b/)) {
+    return {
+      text: "🎧 **CoopServe 24/7 Customer Support Desk**\n\nWe are here for you around the clock to ensure high-quality service, fair pricing, and complete peace of mind:\n\n• **Toll-Free Helpline**: 📞 **1800-266-7788** (24/7 Live Emergency Line)\n• **Support Email**: ✉️ **help@coopserve.in**\n• **District Cooperative Coordination**: Indiranagar District Office, Bengaluru\n• **30-Day Guarantee**: Free revisit & rework if you are unsatisfied with any technician's service.",
+      diagnosticPoints: [
+        "Instant Resolution: Type 'Raise a ticket' to create an official tracked support ticket.",
+        "Order Assistance: Type 'Track my booking' to view live GPS technician status.",
+        "Billing & Refunds: 100% instant refund on cancellations made >2 hours before service.",
+      ],
+      action: {
+        label: "Contact Support Hub",
+        url: "/support",
+      },
+    };
+  }
+
+  // 3. Ticket Generation & Complaint Escalation
+  if (matches(/\b(ticket|raise\s*(a\s*)?ticket|complaint|issue\s*with\s*(my\s*)?service|technician\s*(late|didn't|delayed)|bad\s*service|poor\s*work|unhappy|disappointed|not\s*satisfied)\b/)) {
+    const ticketId = "TIC-" + Math.floor(100000 + Math.random() * 900000);
+    return {
+      text: `🎫 **Official Support Ticket Generated: #${ticketId}**\n\nWe sincerely apologize for any inconvenience! Your issue has been logged with **Priority: HIGH** and directly escalated to your District Society Coordinator.\n\n• **Ticket ID**: #${ticketId}\n• **Status**: ACTIVE / ESCALATED\n• **SLA Response**: Under 15 minutes\n• **Assigned Cell**: Bengaluru Central Cooperative Coordination Hub\n• **Resolution Guarantee**: In accordance with the CoopServe Charter, you are eligible for an immediate **100% Free Rework Guarantee** or full refund.`,
+      diagnosticPoints: [
+        `Ticket #${ticketId} is linked to your registered profile.`,
+        "Our society duty officer will reach you on your phone within 15 minutes.",
+        "Emergency phone escalation: 1800-266-7788 (quote Ticket #" + ticketId + ").",
+      ],
+      action: {
+        label: "View Account & Tickets",
+        url: "/account",
+      },
+    };
+  }
+
+  // 4. Live Tracking & Arrival Status
+  if (matches(/\b(track\s*(my\s*)?booking|where\s*is\s*(my\s*)?technician|where\s*is\s*(my\s*)?pro|eta|arrival\s*time|tracking|live\s*status)\b/)) {
+    return {
+      text: "📍 **Live Technician Tracking & Arrival ETA**\n\nWhen a cooperative technician is dispatched to your home, you can follow their journey in real time with live GPS breadcrumbs, verified mobile OTP, and direct calling.",
+      diagnosticPoints: [
+        "View technician photo, ID, trade certification, and vehicle number.",
+        "6-Stage live progress: Confirmed ➔ Dispatched ➔ En Route ➔ Arrived ➔ In Progress ➔ Completed.",
+        "Pay after service completion via UPI, Card, or Doorstep Cash.",
+      ],
+      action: {
+        label: "Open Live Tracking",
+        url: "/tracking/BK-884920",
       },
     };
   }
 
   if (matches(/\b(who\s*are\s*you|what\s*is\s*your\s*name|what\s*can\s*you\s*do|about\s*you|introduce\s*yourself)\b/)) {
     return {
-      text: "I am Home Buddy ⚡, CoopServe's resident AI concierge!\n\nI combine diagnostic engineering knowledge across all 20 home trades with real-time dispatch matching. I can troubleshoot household breakdowns, provide instant DIY maintenance advice, compute cost estimates, and connect you directly with verified neighborhood technicians.",
+      text: "I am CoopServe Support & Home Buddy ⚡, your AI customer support concierge!\n\nI combine 24/7 customer service (ticket resolution, refunds, tracking, booking support) with diagnostic engineering across all 20 cooperative trades. I can troubleshoot household breakdowns, provide instant DIY maintenance advice, and connect you with certified neighborhood technicians.",
       diagnosticPoints: [
-        "Trained across electrical, plumbing, HVAC, carpentry, cleaning, appliances, and painting.",
-        "Equipped with live Google Gemini & OpenAI API support for open-ended queries.",
-        "Direct integration with CoopServe's transparent 100% fixed-rate pricing.",
+        "24/7 Customer Support Desk: Toll-free 1800-266-7788 / help@coopserve.in.",
+        "Equipped with live Google Gemini & OpenAI AI for open-ended queries.",
+        "Direct integration with CoopServe's transparent 100% fixed-rate pricing and 30-day warranty.",
       ],
       action: {
         label: "Browse Services Catalog",

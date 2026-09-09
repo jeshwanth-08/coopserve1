@@ -21,6 +21,9 @@ import {
   Droplets,
   Zap,
   Check,
+  Headphones,
+  Ticket,
+  LifeBuoy,
 } from "lucide-react";
 import {
   AiDiagnosisResult,
@@ -80,13 +83,17 @@ export default function HomeBuddyWidget() {
     const saved = localStorage.getItem("coopserve_gemini_key") || "";
     setActiveApiKey(saved);
     setApiKeyInput(saved);
+
+    const handleOpenChat = () => setIsOpen(true);
+    window.addEventListener("open-support-chat", handleOpenChat);
+    return () => window.removeEventListener("open-support-chat", handleOpenChat);
   }, []);
 
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "m-init-1",
       sender: "bot",
-      text: "Hello! I am Home Buddy ⚡, your AI home maintenance concierge. Describe your issue or tap the 📸 Camera button to diagnose defects directly from a photo!",
+      text: "Hello! 👋 Welcome to **CoopServe 24/7 Customer Support & AI Concierge**.\n\nI can help you with anything — tracking your technician, raising official support tickets, instant cancellations & refunds, 30-day rework guarantees, or diagnosing home repair defects with 📸 photo analysis. How may I assist you today?",
     },
   ]);
 
@@ -334,21 +341,26 @@ export default function HomeBuddyWidget() {
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xl shadow-slate-900/30 border border-slate-700 transition-all hover:scale-105 active:scale-95 group"
-            aria-label="Ask Home Buddy AI"
+            className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-slate-950 hover:bg-slate-900 text-white font-bold text-xs shadow-2xl shadow-slate-900/40 border border-slate-800 transition-all hover:scale-105 active:scale-95 group ring-1 ring-white/10"
+            aria-label="CoopServe 24/7 Customer Support & AI Chatbot"
           >
             <div className="relative">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-brand-500 to-indigo-500 flex items-center justify-center text-white">
-                <Sparkles className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-brand-500/30">
+                <Headphones className="w-4 h-4" />
               </div>
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-900 animate-pulse" />
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-950 animate-pulse" />
             </div>
             <div className="text-left hidden sm:block">
-              <span className="block text-[11px] font-black text-white flex items-center gap-1">
-                Home Buddy <Camera className="w-3 h-3 text-cyan-300" />
-              </span>
-              <span className="block text-[9px] text-slate-300 font-medium">
-                Chat & AI Photo Diagnosis
+              <div className="flex items-center gap-1.5">
+                <span className="block text-[11px] font-black text-white">
+                  24/7 Customer Support
+                </span>
+                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 uppercase">
+                  Online
+                </span>
+              </div>
+              <span className="block text-[10px] text-slate-300 font-medium">
+                Live Support & AI Diagnostics
               </span>
             </div>
           </button>
@@ -359,21 +371,21 @@ export default function HomeBuddyWidget() {
       {isOpen && (
         <div className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[440px] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[590px] max-h-[88vh] animate-in fade-in slide-in-from-bottom-5 duration-200">
           {/* Header */}
-          <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+          <div className="p-4 bg-slate-950 text-white flex items-center justify-between shrink-0 border-b border-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-500 to-indigo-500 flex items-center justify-center text-white shadow-md">
-                <Sparkles className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+                <Headphones className="w-5 h-5" />
               </div>
               <div>
                 <h4 className="text-sm font-black text-white flex items-center gap-1.5">
-                  <span>Home Buddy AI</span>
-                  <span className="text-[9px] bg-cyan-500/30 text-cyan-300 border border-cyan-400/40 px-1.5 py-0.2 rounded-full uppercase font-bold">
-                    Vision + Chat
+                  <span>CoopServe Support</span>
+                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-1.5 py-0.2 rounded-full uppercase font-bold">
+                    24/7 Live
                   </span>
                 </h4>
                 <p className="text-[10px] text-slate-300 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                  <span>20 Cooperative Trades • Photo Diagnose Ready</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+                  <span>AI Support Desk • Helpline 1800-266-7788</span>
                 </p>
               </div>
             </div>
@@ -655,18 +667,32 @@ export default function HomeBuddyWidget() {
           {/* Quick Prompts Carousel */}
           <div className="p-2 bg-white border-t border-slate-100 overflow-x-auto flex gap-1.5 text-[11px] no-scrollbar shrink-0">
             <button
+              onClick={() => handleQuickPrompt("🎧 Customer Support & Helpline")}
+              className="px-2.5 py-1 rounded-full bg-brand-50 hover:bg-brand-100 text-brand-800 border border-brand-200 text-[10px] font-bold flex items-center gap-1 shrink-0"
+            >
+              <Headphones className="w-3 h-3 text-brand-600" />
+              <span>🎧 Support Desk</span>
+            </button>
+            <button
+              onClick={() => handleQuickPrompt("Raise a support ticket")}
+              className="px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold flex items-center gap-1 shrink-0"
+            >
+              <Ticket className="w-3 h-3 text-amber-600" />
+              <span>🎫 Raise Ticket</span>
+            </button>
+            <button
               onClick={() => setShowPhotoDiagnosis(true)}
               className="px-2.5 py-1 rounded-full bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-[10px] font-bold flex items-center gap-1 shrink-0"
             >
               <Camera className="w-3 h-3 text-cyan-600" />
-              <span>📸 Diagnose from Photo</span>
+              <span>📸 Diagnose Photo</span>
             </button>
             {[
+              "Where is my technician?",
+              "Refund & cancellation policy",
+              "30-day rework warranty",
               "Water leaking under sink",
-              "Main power MCB trips",
-              "AC not cooling / freezing",
-              "How to book a verified pro?",
-              "What is HOME+ membership?",
+              "AC not cooling",
             ].map((qp, idx) => (
               <button
                 key={idx}
@@ -693,7 +719,7 @@ export default function HomeBuddyWidget() {
               type="text"
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
-              placeholder="Describe issue or click 📸 to diagnose..."
+              placeholder="Ask customer support or describe an issue..."
               className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
             <button
