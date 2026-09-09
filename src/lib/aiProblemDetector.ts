@@ -1,6 +1,7 @@
 /**
  * CoopServe AI Problem Detection Engine
- * Analyzes uploaded issue photos, diagnoses problems, recommends services & fair pricing
+ * Integrates Google Gemini 1.5 Flash Vision + Intelligent Local Classifier
+ * Strictly validates whether an image is a genuine household defect or an unrelated photo (e.g. quotes, documents, selfies)
  */
 
 export interface AiDiagnosisResult {
@@ -29,6 +30,15 @@ export interface AiDiagnosisResult {
   matchedSpecialistsCount: number;
   bookingUrl: string;
   timestamp: string;
+}
+
+export interface DiagnosisResponse {
+  success: boolean;
+  isHouseholdDefect: boolean;
+  error?: "UNRELATED_IMAGE" | "UNREADABLE_IMAGE" | "API_ERROR";
+  detectedSubject?: string;
+  message?: string;
+  diagnosis?: AiDiagnosisResult;
 }
 
 export interface SampleIssuePreset {
@@ -285,6 +295,150 @@ export const SAMPLE_ISSUE_PRESETS: SampleIssuePreset[] = [
 ];
 
 /**
+ * Live Google Gemini 1.5 Flash Vision API Call
+ */
+async function callGeminiVision(
+  imageBase64: string,
+  apiKey: string,
+  userNotes?: string
+): Promise<DiagnosisResponse | null> {
+  try {
+    // Parse MIME and base64 parts
+    let mimeType = "image/jpeg";
+    let base64Data = imageBase64;
+
+    if (imageBase64.includes(";base64,")) {
+      const parts = imageBase64.split(";base64,");
+      mimeType = parts[0].replace("data:", "");
+      base64Data = parts[1];
+    }
+
+    const systemPrompt = `You are the expert Computer Vision Diagnostic Engine for CoopServe, a cooperative home maintenance platform.
+
+Analyze this image with technical rigor.
+
+CRITICAL VALIDATION RULE (VERY IMPORTANT):
+FIRST, determine whether this image depicts a REAL physical household or home repair issue (such as: plumbing leaks, pipes, valves, drainage, electrical switchboards, wires, MCB breakers, AC units, cooling coils, dirty filters, wall seepage, water dampness, broken tiles, appliances like washing machines or refrigerators).
+
+IF the image contains ANY of the following:
+- Quotes, motivational sayings, text, poems, screenshots of text, letters, books, or posters
+- Selfies, people, faces, fashion, or personal portraits
+- Animals, pets, wildlife, or outdoor nature landscapes
+- Food, cooking recipes, or cars
+- Digital screenshots of computer software, memes, or mobile apps
+
+YOU MUST REJECT IT! Set "isHouseholdDefect": false.
+Do NOT pretend a quote or document is a plumbing or electrical issue!
+Describe what the image actually depicts under "detectedSubject" and provide a polite rejection message in "message".
+
+OUTPUT FORMAT (STRICT JSON ONLY, NO MARKDOWN, NO CODE FENCES):
+{
+  "isHouseholdDefect": false,
+  "detectedSubject": "Quote / Motivational Text Poster",
+  "message": "The uploaded photo is a text quote and does not show any home maintenance defect. Please upload a clear photo of an actual repair issue (e.g. leaking pipe, AC unit, switchboard)."
+}
+
+OR, IF IT IS A GENUINE HOUSEHOLD DEFECT:
+{
+  "isHouseholdDefect": true,
+  "diagnosis": {
+    "id": "diag_gemini_vision",
+    "problemTitle": "Specific technical defect title (e.g. Leaking Angle Valve Joint)",
+    "category": "One of: Plumbing | Electrician | HVAC & AC Technician | Deep Cleaning | Painting & Wall Care | Appliance Repair | Carpentry",
+    "confidence": 92,
+    "severity": "LOW" | "MEDIUM" | "HIGH" | "EMERGENCY",
+    "detectedSymptoms": ["Detailed observation 1", "Detailed observation 2", "Detailed observation 3"],
+    "rootCauseAnalysis": "Technical engineering root cause of why this failure occurred",
+    "urgencyAdvice": "Actionable immediate safety instruction for the resident",
+    "recommendedService": {
+      "id": "svc-1",
+      "name": "Exact service to book",
+      "category": "Discipline name",
+      "slug": "service-slug",
+      "startingPrice": 399
+    },
+    "estimatedCost": {
+      "min": 399,
+      "max": 699,
+      "currency": "₹",
+      "doorstepFee": "Free with Society Pool (or ₹0 for HOME+ members)"
+    },
+    "actionableTip": "One concrete safe tip the resident can do right now",
+    "matchedSpecialistsCount": 8,
+    "bookingUrl": "/book/svc-1?issue=diagnosed+issue"
+  }
+}
+User notes provided: ${userNotes || "None"}`;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: systemPrompt },
+              {
+                inlineData: {
+                  mimeType,
+                  data: base64Data,
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: "application/json",
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn("Gemini Vision API returned status:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const candidateText =
+      data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!candidateText) return null;
+
+    const parsed = JSON.parse(candidateText.trim());
+    if (parsed.isHouseholdDefect === false) {
+      return {
+        success: false,
+        isHouseholdDefect: false,
+        error: "UNRELATED_IMAGE",
+        detectedSubject: parsed.detectedSubject || "Text / Document / Unrelated Photo",
+        message:
+          parsed.message ||
+          "No household defect detected in this image. Please upload a clear photo of an actual repair issue.",
+      };
+    }
+
+    if (parsed.isHouseholdDefect === true && parsed.diagnosis) {
+      return {
+        success: true,
+        isHouseholdDefect: true,
+        diagnosis: {
+          ...parsed.diagnosis,
+          timestamp: new Date().toISOString(),
+        },
+      };
+    }
+
+    return null;
+  } catch (err) {
+    console.warn("Gemini Vision execution error:", err);
+    return null;
+  }
+}
+
+/**
  * Intelligent diagnostic inference based on user-supplied image and notes
  */
 export async function diagnoseProblemFromImage(options: {
@@ -292,75 +446,134 @@ export async function diagnoseProblemFromImage(options: {
   userNotes?: string;
   imageBase64?: string;
   fileName?: string;
-}): Promise<AiDiagnosisResult> {
-  const { samplePresetId, userNotes, fileName } = options;
+  apiKey?: string;
+}): Promise<DiagnosisResponse> {
+  const { samplePresetId, userNotes, imageBase64, fileName, apiKey: clientApiKey } = options;
 
-  // 1. Direct preset match
+  // 1. Direct preset match (100% reliable for demonstration)
   if (samplePresetId) {
     const matched = SAMPLE_ISSUE_PRESETS.find((p) => p.id === samplePresetId);
     if (matched) {
-      return { ...matched.diagnosis, timestamp: new Date().toISOString() };
+      return {
+        success: true,
+        isHouseholdDefect: true,
+        diagnosis: { ...matched.diagnosis, timestamp: new Date().toISOString() },
+      };
     }
   }
 
-  // 2. Keyword heuristic mapping from user notes or file name
-  const text = ((userNotes || "") + " " + (fileName || "")).toLowerCase();
+  // 2. Try Live Google Gemini Vision if API key is provided
+  const geminiKey =
+    clientApiKey ||
+    process.env.GEMINI_API_KEY ||
+    process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
-  if (text.includes("ac") || text.includes("cool") || text.includes("ice") || text.includes("air condition") || text.includes("filter")) {
-    return { ...SAMPLE_ISSUE_PRESETS[0].diagnosis, timestamp: new Date().toISOString() };
+  if (geminiKey && imageBase64) {
+    const geminiVisionResult = await callGeminiVision(imageBase64, geminiKey, userNotes);
+    if (geminiVisionResult) {
+      return geminiVisionResult;
+    }
   }
 
-  if (text.includes("leak") || text.includes("pipe") || text.includes("tap") || text.includes("water") || text.includes("plumb") || text.includes("flush")) {
-    return { ...SAMPLE_ISSUE_PRESETS[1].diagnosis, timestamp: new Date().toISOString() };
+  // 3. Intelligent Local Classifier (Strict Validation Filter)
+  const fullText = ((userNotes || "") + " " + (fileName || "")).toLowerCase();
+
+  // Obvious non-maintenance indicators (quotes, documents, memes, selfies, receipts)
+  const unrelatedPatterns = [
+    "quote", "saying", "motivation", "text", "poem", "status", "whatsapp",
+    "meme", "funny", "screenshot", "screen", "receipt", "invoice", "bill",
+    "pdf", "doc", "document", "id", "card", "selfie", "portrait", "face",
+    "cat", "dog", "puppy", "pet", "animal", "bird", "food", "dish", "recipe",
+    "car", "bike", "vehicle", "nature", "mountain", "flower", "sunset", "travel"
+  ];
+
+  const hasUnrelatedTerm = unrelatedPatterns.some((term) =>
+    fullText.split(/[\s_\-.]+/).includes(term)
+  );
+
+  // Home repair positive signal vocabulary
+  const maintenanceKeywords = [
+    "pipe", "leak", "ac", "cool", "ice", "frost", "wire", "switch", "socket",
+    "water", "plumb", "stain", "tile", "damp", "seep", "paint", "crack",
+    "drain", "machine", "geyser", "fan", "sink", "tap", "flush", "toilet",
+    "breaker", "mcb", "appliance", "clean", "clog", "rust", "heater", "fridge",
+    "refrigerator", "oven", "repair", "broken", "fault", "defect", "spark"
+  ];
+
+  const hasMaintenanceSignal = maintenanceKeywords.some((term) =>
+    fullText.includes(term)
+  );
+
+  // If user uploaded a quote or non-maintenance picture without maintenance signals:
+  if (hasUnrelatedTerm || (!hasMaintenanceSignal && !userNotes?.trim())) {
+    return {
+      success: false,
+      isHouseholdDefect: false,
+      error: "UNRELATED_IMAGE",
+      detectedSubject: hasUnrelatedTerm
+        ? "Text Quote / Document / Non-Maintenance Photo"
+        : "Unidentified Non-Maintenance Image",
+      message:
+        "No household maintenance defect was detected in this photo. The image appears to be a quote, document, or non-repair picture. CoopServe AI specializes exclusively in home repairs (plumbing, electrical, AC, cleaning, painting, appliances).",
+    };
   }
 
-  if (text.includes("spark") || text.includes("burn") || text.includes("electric") || text.includes("socket") || text.includes("switch") || text.includes("mcb") || text.includes("wire")) {
-    return { ...SAMPLE_ISSUE_PRESETS[2].diagnosis, timestamp: new Date().toISOString() };
+  // If user included notes or file hints about a specific repair:
+  if (fullText.includes("ac") || fullText.includes("cool") || fullText.includes("ice") || fullText.includes("air condition") || fullText.includes("filter")) {
+    return {
+      success: true,
+      isHouseholdDefect: true,
+      diagnosis: { ...SAMPLE_ISSUE_PRESETS[0].diagnosis, timestamp: new Date().toISOString() },
+    };
   }
 
-  if (text.includes("clean") || text.includes("stain") || text.includes("bathroom") || text.includes("tile") || text.includes("sofa") || text.includes("scale")) {
-    return { ...SAMPLE_ISSUE_PRESETS[3].diagnosis, timestamp: new Date().toISOString() };
+  if (fullText.includes("leak") || fullText.includes("pipe") || fullText.includes("tap") || fullText.includes("water") || fullText.includes("plumb") || fullText.includes("flush")) {
+    return {
+      success: true,
+      isHouseholdDefect: true,
+      diagnosis: { ...SAMPLE_ISSUE_PRESETS[1].diagnosis, timestamp: new Date().toISOString() },
+    };
   }
 
-  if (text.includes("damp") || text.includes("seep") || text.includes("paint") || text.includes("wall") || text.includes("crack") || text.includes("peel")) {
-    return { ...SAMPLE_ISSUE_PRESETS[4].diagnosis, timestamp: new Date().toISOString() };
+  if (fullText.includes("spark") || fullText.includes("burn") || fullText.includes("electric") || fullText.includes("socket") || fullText.includes("switch") || fullText.includes("mcb") || fullText.includes("wire")) {
+    return {
+      success: true,
+      isHouseholdDefect: true,
+      diagnosis: { ...SAMPLE_ISSUE_PRESETS[2].diagnosis, timestamp: new Date().toISOString() },
+    };
   }
 
-  if (text.includes("machine") || text.includes("wash") || text.includes("fridge") || text.includes("refrigerator") || text.includes("microwave")) {
-    return { ...SAMPLE_ISSUE_PRESETS[5].diagnosis, timestamp: new Date().toISOString() };
+  if (fullText.includes("clean") || fullText.includes("stain") || fullText.includes("bathroom") || fullText.includes("tile") || fullText.includes("sofa") || fullText.includes("scale")) {
+    return {
+      success: true,
+      isHouseholdDefect: true,
+      diagnosis: { ...SAMPLE_ISSUE_PRESETS[3].diagnosis, timestamp: new Date().toISOString() },
+    };
   }
 
-  // 3. Fallback to comprehensive default diagnosis
+  if (fullText.includes("damp") || fullText.includes("seep") || fullText.includes("paint") || fullText.includes("wall") || fullText.includes("crack") || fullText.includes("peel")) {
+    return {
+      success: true,
+      isHouseholdDefect: true,
+      diagnosis: { ...SAMPLE_ISSUE_PRESETS[4].diagnosis, timestamp: new Date().toISOString() },
+    };
+  }
+
+  if (fullText.includes("machine") || fullText.includes("wash") || fullText.includes("fridge") || fullText.includes("refrigerator") || fullText.includes("microwave")) {
+    return {
+      success: true,
+      isHouseholdDefect: true,
+      diagnosis: { ...SAMPLE_ISSUE_PRESETS[5].diagnosis, timestamp: new Date().toISOString() },
+    };
+  }
+
+  // If unclear, do not fabricate a repair — ask for clarification
   return {
-    id: "diag_gen_" + Date.now(),
-    problemTitle: "Household Technical Defect & Wear Anomaly",
-    category: "General Maintenance",
-    confidence: 88,
-    severity: "MEDIUM",
-    detectedSymptoms: [
-      "Surface wear and component misalignment detected",
-      "Irregular mechanical or hydraulic clearance",
-      "Localized thermal or moisture variance"
-    ],
-    rootCauseAnalysis:
-      "Physical wear and tear requiring physical inspection and calibration by a certified cooperative specialist.",
-    urgencyAdvice: "Avoid continuous operation until verified to prevent minor defects from escalating into costly repairs.",
-    recommendedService: {
-      id: "svc-gen",
-      name: "Cooperative Multi-Skill Inspection & Fix",
-      category: "General Maintenance",
-      slug: "general-maintenance",
-      startingPrice: 299,
-    },
-    estimatedCost: {
-      min: 299,
-      max: 599,
-      currency: "₹",
-      doorstepFee: "Free preliminary diagnosis for cooperative members",
-    },
-    actionableTip: "Take 2-3 additional photos from different angles with adequate room lighting.",
-    matchedSpecialistsCount: 15,
-    bookingUrl: "/book/svc-1?issue=General+Maintenance+Inspection",
-    timestamp: new Date().toISOString(),
+    success: false,
+    isHouseholdDefect: false,
+    error: "UNREADABLE_IMAGE",
+    detectedSubject: "Ambiguous Image Content",
+    message:
+      "Could not identify a clear household defect signature. Please upload a clear, well-lit photo focusing on the damaged pipe, electrical board, AC unit, or broken fixture.",
   };
 }

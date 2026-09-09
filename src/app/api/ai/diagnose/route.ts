@@ -21,23 +21,26 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { samplePresetId, userNotes, imageBase64, fileName } = body;
+    const { samplePresetId, userNotes, imageBase64, fileName, apiKey } = body;
 
-    const diagnosis = await diagnoseProblemFromImage({
+    const result = await diagnoseProblemFromImage({
       samplePresetId,
       userNotes,
       imageBase64,
       fileName,
+      apiKey: apiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
     });
 
-    return NextResponse.json({
-      success: true,
-      diagnosis,
-    });
+    return NextResponse.json(result);
   } catch (error: any) {
     console.error("AI Diagnosis API error:", error);
     return NextResponse.json(
-      { error: "Failed to process visual diagnosis" },
+      {
+        success: false,
+        isHouseholdDefect: false,
+        error: "API_ERROR",
+        message: "Failed to process visual diagnosis. Please try again or test a sample issue.",
+      },
       { status: 500 }
     );
   }

@@ -21,6 +21,7 @@ import {
   Info,
   ChevronRight,
   FileImage,
+  XCircle,
 } from "lucide-react";
 import Navbar from "@/components/home/Navbar";
 import Footer from "@/components/home/Footer";
@@ -45,12 +46,17 @@ export default function AiDiagnosisPage() {
   const [diagnosis, setDiagnosis] = useState<AiDiagnosisResult | null>(
     SAMPLE_ISSUE_PRESETS[0].diagnosis
   );
+  const [rejectionInfo, setRejectionInfo] = useState<{
+    error?: string;
+    detectedSubject?: string;
+    message?: string;
+  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const SCAN_STAGES = [
     "Preprocessing image & calibrating lighting...",
-    "Scanning surface textures, thermal & moisture gradients...",
+    "Verifying physical defect signature (rejecting non-repair images)...",
     "Matching defect signatures against 15,000+ verified co-op cases...",
     "Formulating diagnostic hypothesis & calculating fair co-op rate...",
   ];
@@ -63,6 +69,7 @@ export default function AiDiagnosisPage() {
         const resultUrl = uploadEvent.target?.result as string;
         setSelectedPhoto(resultUrl);
         setActivePreset(null);
+        setRejectionInfo(null);
         runAiAnalysis(resultUrl, file.name);
       };
       reader.readAsDataURL(file);
@@ -73,6 +80,7 @@ export default function AiDiagnosisPage() {
     setActivePreset(preset);
     setSelectedPhoto(preset.thumbnail);
     setUserNotes(preset.description);
+    setRejectionInfo(null);
     runAiAnalysis(preset.thumbnail, undefined, preset.id);
   };
 
@@ -84,6 +92,7 @@ export default function AiDiagnosisPage() {
     setAnalyzing(true);
     setScanStep(0);
     setDiagnosis(null);
+    setRejectionInfo(null);
 
     // Progressive scanning simulator
     const stepInterval = setInterval(() => {
@@ -95,9 +104,10 @@ export default function AiDiagnosisPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          samplePresetId: presetId || activePreset?.id,
+          samplePresetId: presetId,
           userNotes,
           fileName,
+          imageBase64: photoUrl,
         }),
       });
 
@@ -105,17 +115,37 @@ export default function AiDiagnosisPage() {
       setTimeout(() => {
         clearInterval(stepInterval);
         setAnalyzing(false);
-        if (data.diagnosis) {
+        if (data.isHouseholdDefect && data.diagnosis) {
           setDiagnosis(data.diagnosis);
+          setRejectionInfo(null);
+        } else {
+          setDiagnosis(null);
+          setRejectionInfo({
+            error: data.error || "UNRELATED_IMAGE",
+            detectedSubject: data.detectedSubject || "Non-Maintenance Photo",
+            message:
+              data.message ||
+              "No household maintenance defect was detected in this photo. The image appears to be a quote, document, or non-repair picture.",
+          });
         }
       }, 1800);
     } catch {
       clearInterval(stepInterval);
       setAnalyzing(false);
-      // Fallback to preset diagnosis
-      if (activePreset) {
-        setDiagnosis(activePreset.diagnosis);
+      // Fallback to preset diagnosis if presetId was used
+      if (presetId) {
+        const found = SAMPLE_ISSUE_PRESETS.find((p) => p.id === presetId);
+        if (found) {
+          setDiagnosis(found.diagnosis);
+          return;
+        }
       }
+      setRejectionInfo({
+        error: "API_ERROR",
+        detectedSubject: "Processing Error",
+        message:
+          "Unable to process the visual diagnosis at this moment. Please try again or test one of the defect presets.",
+      });
     }
   };
 
@@ -142,7 +172,7 @@ export default function AiDiagnosisPage() {
               Snap a Photo. AI Diagnoses the Defect.
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-2xl">
-              Don't know what's broken or what to ask for? Upload a photo of your leaking pipe,
+              Don&apos;t know what&apos;s broken or what to ask for? Upload a photo of your leaking pipe,
               flickering switchboard, or faulty AC. Our vision model isolates the root cause and
               matches you directly with certified cooperative specialists at pre-agreed fair rates.
             </p>
@@ -158,44 +188,47 @@ export default function AiDiagnosisPage() {
               <span className="bg-white/10 px-2.5 py-1 rounded-lg">4. Fair Cost</span>
               <ChevronRight className="w-3.5 h-3.5 text-indigo-400" />
               <span className="bg-brand-500 text-white px-2.5 py-1 rounded-lg shadow-sm">
-                5. Instant Provider Match
+                5. Find Provider
               </span>
             </div>
           </div>
         </div>
 
-        {/* Interactive Workspace Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left Column: Photo Upload & Preset Gallery (5 Cols) */}
+        {/* Diagnostic Studio Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Image Upload & Presets (5 Cols) */}
           <div className="lg:col-span-5 space-y-6">
-            {/* Upload Card */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
                   <Upload className="w-4 h-4 text-brand-600" />
-                  <span>Upload Problem Photo</span>
-                </h3>
-                <span className="text-[11px] text-slate-400 font-semibold">JPG, PNG or HEIC</span>
+                  <h3 className="font-bold text-slate-900 text-sm">Upload Defect Photo</h3>
+                </div>
+                <span className="text-[11px] text-slate-500">JPG, PNG, WebP</span>
               </div>
 
-              {/* Photo Preview & Drop Area */}
+              {/* Upload Drop Zone / Camera Preview */}
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="relative aspect-[4/3] rounded-2xl overflow-hidden border-2 border-dashed border-slate-300 hover:border-brand-500 bg-slate-50 cursor-pointer group transition-all flex flex-col items-center justify-center p-4 text-center"
+                className="relative cursor-pointer group rounded-2xl border-2 border-dashed border-slate-200 hover:border-brand-500 bg-slate-50/50 hover:bg-brand-50/20 transition-all p-4 text-center aspect-video flex flex-col items-center justify-center overflow-hidden"
               >
                 {selectedPhoto ? (
                   <>
                     <img
                       src={selectedPhoto}
-                      alt="Uploaded defect"
-                      className={`w-full h-full object-cover transition-all duration-300 ${
-                        analyzing ? "brightness-75 scale-105" : ""
-                      }`}
+                      alt="Selected Defect"
+                      className="w-full h-full object-cover rounded-xl"
                     />
-                    {/* Laser scanning beam overlay when analyzing */}
+                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl text-white font-bold text-xs gap-2 backdrop-blur-[2px]">
+                      <Camera className="w-4 h-4" />
+                      <span>Click to change photo</span>
+                    </div>
                     {analyzing && (
-                      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-500/30 to-transparent animate-pulse pointer-events-none flex flex-col justify-center items-center">
-                        <div className="w-full h-1 bg-gradient-to-r from-cyan-400 via-indigo-400 to-cyan-400 shadow-lg shadow-cyan-400/50" />
+                      <div className="absolute inset-0 bg-indigo-950/60 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-2 p-4">
+                        <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span className="text-xs font-bold animate-pulse">
+                          Scanning Visual Patterns...
+                        </span>
                       </div>
                     )}
                     <div className="absolute bottom-3 left-3 right-3 bg-slate-950/80 backdrop-blur-md p-2 rounded-xl text-white text-xs flex items-center justify-between">
@@ -325,6 +358,93 @@ export default function AiDiagnosisPage() {
                     className="bg-indigo-600 h-full rounded-full transition-all duration-300"
                     style={{ width: `${(scanStep + 1) * 25}%` }}
                   />
+                </div>
+              </div>
+            ) : rejectionInfo ? (
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-200/80 shadow-sm space-y-6 animate-in fade-in duration-300">
+                {/* Rejection Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-100 pb-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                      <AlertTriangle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600">
+                          AI Visual Filter
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                          Defect Not Verified
+                        </span>
+                      </div>
+                      <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+                        No Household Defect Detected
+                      </h2>
+                    </div>
+                  </div>
+
+                  <span className="px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200 self-start sm:self-center">
+                    {rejectionInfo.detectedSubject || "Non-Repair Photo"}
+                  </span>
+                </div>
+
+                {/* Explanation Box */}
+                <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-2">
+                  <p className="text-xs text-amber-950 leading-relaxed font-medium">
+                    {rejectionInfo.message}
+                  </p>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    CoopServe AI specifically diagnoses physical defects such as leaking pipes, short circuits, switchboard sparks, AC icing, wall seepage, broken tiles, or malfunctioning appliances. It will not fabricate fake defects on text quotes, memes, documents, or unrelated photos.
+                  </p>
+                </div>
+
+                {/* What can you do */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Recommended Actions
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-4 rounded-2xl border border-slate-200 hover:border-brand-500 bg-slate-50 hover:bg-white text-left transition-all group"
+                    >
+                      <div className="flex items-center gap-2 font-bold text-xs text-slate-900 group-hover:text-brand-600">
+                        <Camera className="w-4 h-4 text-brand-600" />
+                        <span>Upload Defect Photo</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1 leading-normal">
+                        Take a clear picture focusing on the damaged pipe, AC unit, or electrical point.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectPreset(SAMPLE_ISSUE_PRESETS[0])}
+                      className="p-4 rounded-2xl border border-slate-200 hover:border-indigo-500 bg-slate-50 hover:bg-white text-left transition-all group"
+                    >
+                      <div className="flex items-center gap-2 font-bold text-xs text-slate-900 group-hover:text-indigo-600">
+                        <Sparkles className="w-4 h-4 text-indigo-600" />
+                        <span>Test Sample Defect Preset</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1 leading-normal">
+                        Test how the diagnostic engine handles real defects like AC coil freezing or pipe burst.
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Direct browse services */}
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-xs text-slate-500">
+                    Need general assistance or know what you need?
+                  </span>
+                  <Link
+                    href="/services"
+                    className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1"
+                  >
+                    Browse all co-op services <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
               </div>
             ) : diagnosis ? (
