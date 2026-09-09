@@ -21,7 +21,7 @@ function RegisterForm() {
   const [locality, setLocality] = useState<string>(LOCALITIES[0]);
 
   // Provider specific
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([CATEGORIES[0]]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [skills, setSkills] = useState("");
   const [serviceArea, setServiceArea] = useState("");
 
@@ -30,9 +30,7 @@ function RegisterForm() {
 
   const handleCategoryToggle = (cat: string) => {
     if (selectedCategories.includes(cat)) {
-      if (selectedCategories.length > 1) {
-        setSelectedCategories(selectedCategories.filter((c) => c !== cat));
-      }
+      setSelectedCategories(selectedCategories.filter((c) => c !== cat));
     } else {
       setSelectedCategories([...selectedCategories, cat]);
     }
@@ -55,6 +53,11 @@ function RegisterForm() {
       };
 
       if (role === "PROVIDER") {
+        if (selectedCategories.length === 0) {
+          setError("Please select at least one trade category.");
+          setLoading(false);
+          return;
+        }
         payload.serviceCategories = selectedCategories;
         payload.skills = skills
           .split(",")

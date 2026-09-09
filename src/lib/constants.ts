@@ -1,4 +1,4 @@
-﻿export const ROLES = {
+export const ROLES = {
   MEMBER: "MEMBER",
   PROVIDER: "PROVIDER",
   ADMIN: "ADMIN",
@@ -35,8 +35,11 @@ export const CATEGORIES = [
   "Gardener",
   "Appliance Repair",
   "HVAC & AC Technician",
+  "Women's Salon & Spa",
+  "Pest Control",
   "Locksmith",
   "Masonry & Concrete",
+  "Roofing & Waterproofing",
 ] as const;
 
 export const LOCALITIES = [

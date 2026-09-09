@@ -12,6 +12,8 @@ import {
   ArrowLeft,
   Smartphone,
   Sparkles,
+  User,
+  Wrench,
 } from "lucide-react";
 
 interface GoogleSignInButtonProps {
@@ -73,10 +75,14 @@ export default function GoogleSignInButton({
   const [isVerifying, setIsVerifying] = useState(false);
   const [verifySuccess, setVerifySuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [selectedRole, setSelectedRole] = useState<"MEMBER" | "PROVIDER">("MEMBER");
+  const [selectedCategory, setSelectedCategory] = useState("Plumber");
 
   const callbackUrl =
     returnUrl && !returnUrl.startsWith("/login") && !returnUrl.startsWith("/register")
       ? returnUrl
+      : selectedRole === "PROVIDER"
+      ? "/provider"
       : "/member";
 
   const handleButtonClick = async () => {
@@ -173,6 +179,8 @@ export default function GoogleSignInButton({
           verificationMethod: verifyTab,
           code: otpCode.trim(),
           password: password.trim(),
+          role: selectedRole,
+          category: selectedRole === "PROVIDER" ? selectedCategory : undefined,
         }),
       });
 
@@ -421,6 +429,74 @@ export default function GoogleSignInButton({
                   </div>
                 ) : (
                   <>
+                    {/* Persona Selector: Customer vs Service Professional */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">
+                        Account Role / Type:
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRole("MEMBER")}
+                          className={`p-2.5 rounded-xl border text-left transition-all ${
+                            selectedRole === "MEMBER"
+                              ? "bg-blue-50 border-blue-500 text-blue-900 ring-1 ring-blue-500 font-bold"
+                              : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5 text-blue-600" />
+                            <span className="text-xs">Customer</span>
+                          </div>
+                          <span className="block text-[10px] text-slate-500 font-normal mt-0.5">
+                            Book home services
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRole("PROVIDER")}
+                          className={`p-2.5 rounded-xl border text-left transition-all ${
+                            selectedRole === "PROVIDER"
+                              ? "bg-purple-50 border-purple-500 text-purple-900 ring-1 ring-purple-500 font-bold"
+                              : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <Wrench className="w-3.5 h-3.5 text-purple-600" />
+                            <span className="text-xs">Service Pro</span>
+                          </div>
+                          <span className="block text-[10px] text-slate-500 font-normal mt-0.5">
+                            Receive service orders
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Trade / Category Selector if Provider */}
+                    {selectedRole === "PROVIDER" && (
+                      <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200 space-y-1.5 animate-in fade-in">
+                        <label className="text-[11px] font-bold text-purple-900 block">
+                          Choose Your Trade / Specialization:
+                        </label>
+                        <select
+                          value={selectedCategory}
+                          onChange={(e) => setSelectedCategory(e.target.value)}
+                          className="w-full px-3 py-2 border border-purple-300 rounded-xl text-xs bg-white text-slate-900 font-semibold focus:ring-2 focus:ring-purple-500 outline-none"
+                        >
+                          <option value="Plumber">🔧 Plumber</option>
+                          <option value="Electrician">⚡ Electrician</option>
+                          <option value="Carpenter">🪚 Carpenter</option>
+                          <option value="HVAC & AC Technician">❄️ AC & HVAC Specialist</option>
+                          <option value="Women's Salon & Spa">💇 Women's Salon & Spa</option>
+                          <option value="Cleaner">🧹 Deep Cleaning & Housekeeping</option>
+                          <option value="Painter">🎨 Painter & Waterproofing</option>
+                          <option value="Appliance Repair">🛠️ Appliance Repair (Washing Machine, Fridge)</option>
+                          <option value="Pest Control">🪲 Pest Control Specialist</option>
+                          <option value="Gardener">🌿 Landscaping & Gardening</option>
+                        </select>
+                      </div>
+                    )}
+
                     {/* Verification Method Tabs */}
                     <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl text-xs font-medium">
                       <button

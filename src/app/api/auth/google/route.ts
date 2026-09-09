@@ -20,105 +20,21 @@ export async function GET() {
   });
 }
 
-async function seedStarterRequestsForUser(userId: string, locality: string) {
-  try {
-    const existing = await prisma.serviceRequest.count({
-      where: { memberId: userId },
-    });
-    if (existing > 0) return;
-
-    // Find active providers for dispatch
-    const marcus = await prisma.user.findFirst({
-      where: { role: "PROVIDER", name: { contains: "Marcus" } },
-    });
-    const david = await prisma.user.findFirst({
-      where: { role: "PROVIDER", name: { contains: "David" } },
-    });
-
-    const marcusId = marcus?.id;
-    const davidId = david?.id;
-
-    // 1. Active service request (Electrician, in progress)
-    await prisma.serviceRequest.create({
-      data: {
-        memberId: userId,
-        category: "Electrician",
-        description: "Living room main inverter line trip and switchboard circuit check. Needs immediate diagnostic.",
-        visibility: "PERSONAL",
-        locality: locality || "Greenwood Heights",
-        address: "Apartment 3A, Greenwood Heights",
-        isEmergency: false,
-        preferredDateTime: new Date(Date.now() + 1000 * 60 * 60 * 3),
-        status: marcusId ? "IN_PROGRESS" : "PENDING",
-        assignedProviderId: marcusId || null,
-        statusHistory: {
-          create: [
-            { status: "PENDING", changedById: userId, note: "Request submitted via Member Portal" },
-            ...(marcusId
-              ? [
-                  { status: "ASSIGNED", changedById: userId, note: `Auto-dispatched to ${marcus?.name}` },
-                  { status: "IN_PROGRESS", changedById: marcusId, note: "Provider en route with diagnostic tools" },
-                ]
-              : []),
-          ],
-        },
-      },
-    });
-
-    // 2. Completed historical request (5 months ago, Plumber, resolved with 5-star rating)
-    const fiveMonthsAgo = new Date();
-    fiveMonthsAgo.setMonth(fiveMonthsAgo.getMonth() - 5);
-
-    const completedReq = await prisma.serviceRequest.create({
-      data: {
-        memberId: userId,
-        category: "Plumber",
-        description: "Kitchen sink main line trap cleaning and pipe joint sealing.",
-        visibility: "PERSONAL",
-        locality: locality || "Greenwood Heights",
-        address: "Apartment 3A, Greenwood Heights",
-        isEmergency: false,
-        preferredDateTime: fiveMonthsAgo,
-        status: "RESOLVED",
-        assignedProviderId: davidId || null,
-        resolvedAt: fiveMonthsAgo,
-        createdAt: fiveMonthsAgo,
-        statusHistory: {
-          create: [
-            { status: "PENDING", changedById: userId, note: "Request submitted" },
-            ...(davidId
-              ? [
-                  { status: "ASSIGNED", changedById: userId, note: `Assigned to ${david?.name}` },
-                  { status: "RESOLVED", changedById: davidId, note: "Completed trap cleaning and leak test passed" },
-                ]
-              : []),
-          ],
-        },
-      },
-    });
-
-    if (davidId) {
-      await prisma.rating.create({
-        data: {
-          requestId: completedReq.id,
-          memberId: userId,
-          providerId: davidId,
-          stars: 5,
-          comment: "Excellent quick service and clean workspace left behind!",
-        },
-      });
-    }
-
-    console.log(`[Google Auth] Seeded starter requests for member: ${userId}`);
-  } catch (err) {
-    console.warn("[Google Auth] Error seeding starter requests:", err);
-  }
-}
-
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { action, email, name, returnUrl, verificationMethod, code, password } = body;
+    const {
+      action,
+      email,
+      name,
+      returnUrl,
+      verificationMethod,
+      code,
+      password,
+      role: requestedRole,
+      category: requestedCategory,
+      skills: requestedSkills,
+    } = body;
 
     if (action === "check") {
       const clientId = process.env.GOOGLE_CLIENT_ID || "";
@@ -171,33 +87,50 @@ export async function POST(req: Request) {
       });
 
       if (!user) {
-        // STRICT REQUIREMENT: Any Google-authenticated user must default role to MEMBER!
+        const assignedRole = requestedRole === "PROVIDER" ? ROLES.PROVIDER : ROLES.MEMBER;
         const randomHash = `OAUTH_GOOGLE_${crypto.randomBytes(16).toString("hex")}`;
         user = await prisma.user.create({
           data: {
             name: targetName,
             email: targetEmail,
             passwordHash: randomHash,
-            role: ROLES.MEMBER,
+            role: assignedRole,
             locality: "Greenwood Heights",
           },
           include: { providerProfile: true },
         });
+
+        if (assignedRole === ROLES.PROVIDER) {
+          const chosenCategory = requestedCategory || "Plumber";
+          await prisma.providerProfile.create({
+            data: {
+              userId: user.id,
+              skills: JSON.stringify(
+                requestedSkills ? [requestedSkills] : [`Certified ${chosenCategory} Specialist`]
+              ),
+              serviceCategories: JSON.stringify([chosenCategory]),
+              certifications: JSON.stringify([]),
+              serviceArea: "All Localities",
+              isVerified: true,
+              isActive: true,
+              avgRating: 5.0,
+              totalReviews: 0,
+            },
+          });
+        }
         isNewUser = true;
-        console.log(`[Google Auth] Created new MEMBER account for Google user: ${targetEmail}`);
+        console.log(`[Google Auth] Created new ${assignedRole} account for Google user: ${targetEmail}`);
       } else {
         console.log(`[Google Auth] Signed in existing account (${user.role}) for Google user: ${targetEmail}`);
       }
-
-      // If new user or user with 0 requests, seed realistic starter requests so dashboard is populated
-      await seedStarterRequestsForUser(user.id, user.locality || "Greenwood Heights");
     } catch (dbErr) {
       console.warn("[Google Auth] Database query error, using fallback demo user:", dbErr);
+      const assignedRole = requestedRole === "PROVIDER" ? ROLES.PROVIDER : ROLES.MEMBER;
       user = {
         id: `usr-google-${targetEmail.replace(/[^a-z0-9]/g, "-")}`,
         name: targetName,
         email: targetEmail,
-        role: ROLES.MEMBER,
+        role: assignedRole,
         locality: "Greenwood Heights",
       };
     }
@@ -235,10 +168,11 @@ export async function POST(req: Request) {
       console.warn("[Google Auth] Failed to encode NextAuth token:", err);
     }
 
+    const defaultDestination = user.role === "PROVIDER" ? "/provider" : "/member";
     const callbackUrl =
       returnUrl && !returnUrl.startsWith("/login") && !returnUrl.startsWith("/register")
         ? returnUrl
-        : "/member";
+        : defaultDestination;
 
     const response = NextResponse.json({
       success: true,
