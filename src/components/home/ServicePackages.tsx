@@ -107,7 +107,7 @@ export default function ServicePackages({ onOpenBooking }: ServicePackagesProps)
                 </div>
 
                 <Link
-                  href={`/book/svc-1?package=${pkg.slug}`}
+                  href={`/book/${pkg.id}?package=${pkg.slug}`}
                   className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white text-xs font-bold shadow-md shadow-brand-500/20 transition-all flex items-center gap-1.5"
                 >
                   <span>Book Package</span>

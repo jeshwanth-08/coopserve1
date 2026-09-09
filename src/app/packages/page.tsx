@@ -178,7 +178,7 @@ export default function PackagesPage() {
                   </div>
 
                   <button
-                    onClick={() => router.push(`/book/svc-1?package=${pkg.slug}`)}
+                    onClick={() => router.push(`/book/${pkg.id}?package=${pkg.slug}`)}
                     className="px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-bold text-sm shadow-lg shadow-brand-500/25 transition-all flex items-center gap-2 hover:scale-[1.02]"
                   >
                     <span>Book Package</span>
