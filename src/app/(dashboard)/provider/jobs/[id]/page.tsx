@@ -37,6 +37,7 @@ import {
   saveProviderJobs,
   canTransitionStatus,
 } from "@/lib/providerData";
+import { broadcastStatusUpdate } from "@/lib/realtimeSync";
 
 export default function ProviderJobDetailPage() {
   const params = useParams();
@@ -133,6 +134,21 @@ export default function ProviderJobDetailPage() {
     const updatedAll = allJobs.map((j) => (j.id === job.id ? updatedJob : j));
     saveProviderJobs(updatedAll);
     setShowConfirmModal(null);
+
+    // Broadcast live parallel update across tabs
+    broadcastStatusUpdate({
+      requestId: job.id,
+      status: nextStatus,
+      timestamp: new Date().toISOString(),
+      note,
+    });
+
+    // Also update backend if this corresponds to a database request
+    fetch(`/api/requests/${job.id}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nextStatus, note }),
+    }).catch(() => {});
   };
 
   // Add spare material

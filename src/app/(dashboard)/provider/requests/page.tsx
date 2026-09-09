@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import UrgencyBadge from "@/components/UrgencyBadge";
+import { broadcastStatusUpdate, subscribeToStatusUpdates } from "@/lib/realtimeSync";
 import { REQUEST_STATUS } from "@/lib/constants";
 
 export default function ProviderAssignedRequestsPage() {
@@ -59,6 +60,23 @@ export default function ProviderAssignedRequestsPage() {
 
   useEffect(() => {
     fetchAssignedRequests();
+
+    // 1. Instant cross-tab real-time update listener
+    const unsubscribe = subscribeToStatusUpdates(() => {
+      fetchAssignedRequests();
+    });
+
+    // 2. Multi-device auto-polling interval
+    const pollInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        fetchAssignedRequests();
+      }
+    }, 3500);
+
+    return () => {
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
   }, []);
 
   const handleRespond = async (requestId: string, action: "ACCEPT" | "DECLINE", reason?: string) => {
@@ -74,6 +92,14 @@ export default function ProviderAssignedRequestsPage() {
         alert(data.error || `Failed to ${action.toLowerCase()} request`);
         return;
       }
+
+      // Broadcast update across tabs
+      broadcastStatusUpdate({
+        requestId,
+        status: action === "ACCEPT" ? "ACCEPTED" : "PENDING",
+        timestamp: new Date().toISOString(),
+      });
+
       await fetchAssignedRequests();
     } catch (err) {
       alert("Network error processing response");
@@ -100,6 +126,15 @@ export default function ProviderAssignedRequestsPage() {
         alert(data.error || `Failed to update status to ${nextStatus}`);
         return;
       }
+
+      // Broadcast update across tabs immediately
+      broadcastStatusUpdate({
+        requestId,
+        status: nextStatus,
+        timestamp: new Date().toISOString(),
+        note: notes,
+      });
+
       await fetchAssignedRequests();
     } catch (err) {
       alert("Network error updating status");
