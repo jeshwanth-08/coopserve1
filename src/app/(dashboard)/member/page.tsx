@@ -11,6 +11,7 @@ import {
   ArrowRight,
   MapPin,
   Calendar,
+  Camera,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import StatCard from "@/components/StatCard";
@@ -119,6 +120,36 @@ export default async function MemberDashboard() {
         >
           <PlusCircle className="w-4 h-4" />
           <span>Create Service Request</span>
+        </Link>
+      </div>
+
+      {/* 📸 AI Problem Diagnosis Action Card */}
+      <div className="bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 rounded-2xl p-5 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md border border-indigo-800/60">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <Camera className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-white">
+                AI Problem Detection: Snap &amp; Diagnose Defect
+              </h3>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-500 text-white uppercase">
+                Vision AI
+              </span>
+            </div>
+            <p className="text-xs text-indigo-200 mt-0.5">
+              Upload a photo of any broken pipe, switchboard, or noisy AC for root cause analysis, fair pricing &amp; 1-click dispatch.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          href="/ai-diagnosis"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-900 bg-white hover:bg-slate-100 shadow-sm transition-all shrink-0 self-start sm:self-center"
+        >
+          <span>Open AI Scanner</span>
+          <ArrowRight className="w-3.5 h-3.5 text-indigo-600" />
         </Link>
       </div>
 
