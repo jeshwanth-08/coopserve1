@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import Link from "next/link";
@@ -144,17 +144,17 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5">
               <li>
-                <Link href="/auth/signup" className="hover:text-white transition-colors block">
+                <Link href="/register?role=PROVIDER" className="hover:text-white transition-colors block">
                   Become a Professional
                 </Link>
               </li>
               <li>
-                <Link href="/provider" className="hover:text-white transition-colors block">
+                <Link href="/login?returnUrl=/provider" className="hover:text-white transition-colors block">
                   Professional Login
                 </Link>
               </li>
               <li>
-                <Link href="/admin" className="hover:text-white transition-colors block">
+                <Link href="/login?returnUrl=/admin" className="hover:text-white transition-colors block">
                   Coordinator Admin Desk
                 </Link>
               </li>

@@ -37,6 +37,7 @@ import {
   TOP_PROFESSIONALS,
   INDIAN_CITIES,
   ServiceItem,
+  getMatchingServiceForPro,
 } from "@/lib/homeData";
 import { createBooking } from "@/lib/bookingService";
 import { validateCoupon } from "@/lib/adminData";
@@ -59,12 +60,22 @@ function BookingPageContent() {
   const slotQuery = searchParams.get("slot");
 
   const matchingPro = proQuery
-    ? TOP_PROFESSIONALS.find((p) => p.name.toLowerCase() === proQuery.toLowerCase())
+    ? TOP_PROFESSIONALS.find(
+        (p) =>
+          p.name.toLowerCase() === proQuery.toLowerCase() ||
+          p.id.toLowerCase() === proQuery.toLowerCase()
+      )
     : null;
 
-  const [service, setService] = useState<ServiceItem>(
-    POPULAR_SERVICES.find((s) => s.id === serviceId || s.slug === serviceId) || POPULAR_SERVICES[0]
-  );
+  const [service, setService] = useState<ServiceItem>(() => {
+    if (matchingPro && (!serviceId || serviceId === "svc-1")) {
+      return getMatchingServiceForPro(matchingPro);
+    }
+    return (
+      POPULAR_SERVICES.find((s) => s.id === serviceId || s.slug === serviceId) ||
+      (matchingPro ? getMatchingServiceForPro(matchingPro) : POPULAR_SERVICES[0])
+    );
+  });
 
   // Stepper: 1: Service, 2: Date & Time, 3: Address, 4: Details & Media, 5: Professional, 6: Checkout
   const [currentStep, setCurrentStep] = useState<number>(2); // Default to Step 2 since service was clicked

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import Link from "next/link";
@@ -28,6 +28,7 @@ export default function ProfessionalProfilePage() {
   const proId = (params?.id as string) || "pro-1";
 
   const pro = TOP_PROFESSIONALS.find((p) => p.id === proId) || TOP_PROFESSIONALS[0];
+  const targetServiceId = pro.serviceId || "svc-1";
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-brand-500 selection:text-white">
@@ -36,7 +37,7 @@ export default function ProfessionalProfilePage() {
         selectedLocality="Indiranagar"
         onSelectLocation={() => {}}
         onOpenSearch={() => {}}
-        onOpenBooking={() => router.push("/book/svc-1")}
+        onOpenBooking={() => router.push(`/book/${targetServiceId}?pro=${pro.id}`)}
       />
 
       <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full space-y-6">
@@ -71,14 +72,14 @@ export default function ProfessionalProfilePage() {
                 <span className="flex items-center gap-1 font-black text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md">
                   <Star className="w-3.5 h-3.5 fill-amber-400" /> {pro.rating}
                 </span>
-                <span className="text-slate-500">� {pro.jobsCompleted}+ Jobs Completed</span>
-                <span className="text-slate-500">� {pro.experienceYears} Years Experience</span>
+                <span className="text-slate-500"> {pro.jobsCompleted}+ Jobs Completed</span>
+                <span className="text-slate-500"> {pro.experienceYears} Years Experience</span>
               </div>
             </div>
           </div>
 
           <button
-            onClick={() => router.push(`/book/svc-1?pro=${pro.id}`)}
+            onClick={() => router.push(`/book/${targetServiceId}?pro=${pro.id}`)}
             className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2"
           >
             <span>Book With {pro.name.split(" ")[0]}</span>

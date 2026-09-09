@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
@@ -292,7 +292,9 @@ function AdminDashboardContent() {
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Platform Revenue
           </span>
-          <p className="text-2xl font-black text-slate-900">₹{ADMIN_METRICS.revenue.toLocaleString()}</p>
+          <p className="text-2xl font-black text-slate-900" suppressHydrationWarning>
+            ₹{ADMIN_METRICS.revenue.toLocaleString("en-IN")}
+          </p>
           <span className="text-[10px] text-emerald-600 font-bold block">September MTD</span>
         </div>
 

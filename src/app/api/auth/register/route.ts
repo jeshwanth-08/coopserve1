@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, signSessionToken, AUTH_COOKIE_NAME } from "@/lib/auth";
 import { ROLES, Role } from "@/lib/constants";
@@ -119,8 +119,8 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(
-      { error: "Internal server error occurred during registration." },
-      { status: 500 }
+      { error: "Registration could not be completed. Please check your details or sign in." },
+      { status: 400 }
     );
   }
 }

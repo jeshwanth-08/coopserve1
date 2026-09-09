@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -44,9 +44,9 @@ export default function MemberRequestsListPage() {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
-      r.description.toLowerCase().includes(query) ||
-      r.category.toLowerCase().includes(query) ||
-      r.address.toLowerCase().includes(query)
+      (r.description || "").toLowerCase().includes(query) ||
+      (r.category || "").toLowerCase().includes(query) ||
+      (r.address || "").toLowerCase().includes(query)
     );
   });
 

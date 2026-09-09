@@ -1,4 +1,4 @@
-﻿import { ALL_20_SERVICES } from "@/data/allServicesData";
+import { ALL_20_SERVICES } from "@/data/allServicesData";
 
 export interface ServiceItem {
   id: string;
@@ -55,6 +55,8 @@ export interface ProProfile {
   verified: boolean;
   specialty: string;
   quote: string;
+  serviceId?: string;
+  serviceSlug?: string;
 }
 
 export interface ServicePackage {
@@ -523,12 +525,13 @@ export const TOP_PROFESSIONALS: ProProfile[] = [
     avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80",
     verified: true,
     specialty: "High-pressure power jet wash & inverter compressor repairs",
-    quote: "Ensuring maximum cooling output and immaculate post-service cleanup."
+    quote: "Ensuring maximum cooling output and immaculate post-service cleanup.",
+    serviceId: "svc-5",
+    serviceSlug: "ac-technician"
   },
   {
     id: "pro-1",
     name: "Rajesh Kumar",
-
     role: "Master Electrician & Smart Home Specialist",
     city: "Bengaluru",
     rating: 4.94,
@@ -538,7 +541,9 @@ export const TOP_PROFESSIONALS: ProProfile[] = [
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
     verified: true,
     specialty: "High-voltage distribution boards & smart switches",
-    quote: "Precision, safety protocols and leaving the premises spotless are my non-negotiables."
+    quote: "Precision, safety protocols and leaving the premises spotless are my non-negotiables.",
+    serviceId: "svc-1",
+    serviceSlug: "electrician"
   },
   {
     id: "pro-2",
@@ -552,7 +557,9 @@ export const TOP_PROFESSIONALS: ProProfile[] = [
     avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80",
     verified: true,
     specialty: "Hydra facials & organic fruit peel therapies",
-    quote: "Salon grade hygiene in the comfort of your home is what our clients love the most."
+    quote: "Salon grade hygiene in the comfort of your home is what our clients love the most.",
+    serviceId: "svc-19",
+    serviceSlug: "beauty-services"
   },
   {
     id: "pro-3",
@@ -566,7 +573,9 @@ export const TOP_PROFESSIONALS: ProProfile[] = [
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80",
     verified: true,
     specialty: "Concealed pipeline leaks & pressure boosters",
-    quote: "Diagnosing the root cause without needlessly breaking tiles saves customers immense stress."
+    quote: "Diagnosing the root cause without needlessly breaking tiles saves customers immense stress.",
+    serviceId: "svc-2",
+    serviceSlug: "plumber"
   },
   {
     id: "pro-4",
@@ -580,7 +589,9 @@ export const TOP_PROFESSIONALS: ProProfile[] = [
     avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80",
     verified: true,
     specialty: "Inverter AC PCB diagnosis & high-pressure jet wash",
-    quote: "A clean coil restores up to 30% lost efficiency and drops your power bill noticeably."
+    quote: "A clean coil restores up to 30% lost efficiency and drops your power bill noticeably.",
+    serviceId: "svc-5",
+    serviceSlug: "ac-technician"
   },
 ];
 
@@ -885,4 +896,61 @@ export function findMatchingServiceForCategory(categorySlugOrTitle: string): Ser
     POPULAR_SERVICES.find((s) => s.name.toLowerCase().includes(norm) || s.category.toLowerCase().includes(norm))
   );
 }
+
+export function getMatchingServiceForPro(pro: ProProfile): ServiceItem {
+  if (pro.serviceId) {
+    const found = POPULAR_SERVICES.find((s) => s.id === pro.serviceId);
+    if (found) return found;
+  }
+  if (pro.serviceSlug) {
+    const found = POPULAR_SERVICES.find((s) => s.slug === pro.serviceSlug);
+    if (found) return found;
+  }
+  const roleLower = (pro.role + " " + (pro.specialty || "")).toLowerCase();
+  if (
+    roleLower.includes("ac") ||
+    roleLower.includes("cooling") ||
+    roleLower.includes("hvac") ||
+    roleLower.includes("refriger")
+  ) {
+    return (
+      POPULAR_SERVICES.find((s) => s.slug === "ac-technician" || s.id === "svc-5") ||
+      POPULAR_SERVICES[0]
+    );
+  }
+  if (
+    roleLower.includes("plumb") ||
+    roleLower.includes("hydro") ||
+    roleLower.includes("pipe")
+  ) {
+    return (
+      POPULAR_SERVICES.find((s) => s.slug === "plumber" || s.id === "svc-2") ||
+      POPULAR_SERVICES[0]
+    );
+  }
+  if (
+    roleLower.includes("esthetician") ||
+    roleLower.includes("beauty") ||
+    roleLower.includes("bridal") ||
+    roleLower.includes("grooming") ||
+    roleLower.includes("salon")
+  ) {
+    return (
+      POPULAR_SERVICES.find((s) => s.slug === "beauty-services" || s.id === "svc-19") ||
+      POPULAR_SERVICES[0]
+    );
+  }
+  if (
+    roleLower.includes("electr") ||
+    roleLower.includes("switch") ||
+    roleLower.includes("wire")
+  ) {
+    return (
+      POPULAR_SERVICES.find((s) => s.slug === "electrician" || s.id === "svc-1") ||
+      POPULAR_SERVICES[0]
+    );
+  }
+  return POPULAR_SERVICES[0];
+}
+
 

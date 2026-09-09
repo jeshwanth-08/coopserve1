@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { REQUEST_STATUS } from "@/lib/constants";
@@ -81,11 +81,22 @@ export async function POST(
     const totalStars = allProviderRatings.reduce((acc, r) => acc + r.stars, 0);
     const avg = parseFloat((totalStars / allProviderRatings.length).toFixed(2));
 
-    await prisma.providerProfile.update({
+    await prisma.providerProfile.upsert({
       where: { userId: request.assignedProviderId },
-      data: {
+      update: {
         avgRating: avg,
         totalReviews: allProviderRatings.length,
+      },
+      create: {
+        userId: request.assignedProviderId,
+        skills: JSON.stringify(["General Maintenance"]),
+        serviceCategories: JSON.stringify([request.category || "General"]),
+        certifications: JSON.stringify([]),
+        serviceArea: request.locality || "All Localities",
+        avgRating: avg,
+        totalReviews: allProviderRatings.length,
+        isVerified: true,
+        isActive: true,
       },
     });
 

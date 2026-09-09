@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -8,19 +8,22 @@ import {
   MapPin,
   CheckCircle2,
   Sparkles,
+  Star,
   ShieldCheck,
   Zap,
   ArrowRight,
   User,
   Phone,
   AlertCircle,
+  Award,
 } from "lucide-react";
-import { POPULAR_SERVICES, ServiceItem } from "@/lib/homeData";
+import { POPULAR_SERVICES, ServiceItem, ProProfile } from "@/lib/homeData";
 
 interface QuickBookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialService?: ServiceItem | null;
+  initialPro?: ProProfile | null;
   selectedCity: string;
   selectedLocality: string;
 }
@@ -29,12 +32,14 @@ export default function QuickBookingModal({
   isOpen,
   onClose,
   initialService,
+  initialPro,
   selectedCity,
   selectedLocality,
 }: QuickBookingModalProps) {
   const [selectedService, setSelectedService] = useState<ServiceItem>(
     initialService || POPULAR_SERVICES[0]
   );
+  const [selectedPro, setSelectedPro] = useState<ProProfile | null>(initialPro || null);
   const [dateOption, setDateOption] = useState<"today" | "tomorrow" | "dayAfter">("today");
   const [timeSlot, setTimeSlot] = useState<string>("10:00 AM - 12:00 PM");
   const [isEmergency, setIsEmergency] = useState(false);
@@ -52,6 +57,10 @@ export default function QuickBookingModal({
       setSelectedService(initialService);
     }
   }, [initialService]);
+
+  useEffect(() => {
+    setSelectedPro(initialPro || null);
+  }, [initialPro]);
 
   useEffect(() => {
     if (selectedLocality) {
@@ -74,8 +83,8 @@ export default function QuickBookingModal({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            category: selectedService.category,
-            description: `${selectedService.name} - ${notes || "Standard booking"} (Slot: ${dateOption}, ${timeSlot})`,
+            category: selectedPro ? selectedPro.role : selectedService.category,
+            description: `${selectedPro ? `${selectedPro.name} (${selectedPro.role})` : selectedService.name} - ${notes || "Standard booking"} (Slot: ${dateOption}, ${timeSlot})`,
             visibility: "PERSONAL",
             locality: locality,
             address: address,
@@ -99,6 +108,7 @@ export default function QuickBookingModal({
 
   const handleReset = () => {
     setIsConfirmed(false);
+    setSelectedPro(null);
     onClose();
   };
 
@@ -157,6 +167,20 @@ export default function QuickBookingModal({
               </div>
 
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left space-y-2 text-xs">
+                {selectedPro && (
+                  <>
+                    <div className="flex justify-between items-start">
+                      <span className="text-slate-500">Specialist:</span>
+                      <span className="font-bold text-slate-800 text-right">{selectedPro.name}</span>
+                    </div>
+                    <div className="flex justify-between items-start">
+                      <span className="text-slate-500">Designation:</span>
+                      <span className="font-bold text-brand-700 text-right max-w-[260px] leading-tight">
+                        {selectedPro.role}
+                      </span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between">
                   <span className="text-slate-500">Service:</span>
                   <span className="font-bold text-slate-800">{selectedService.name}</span>
@@ -189,6 +213,57 @@ export default function QuickBookingModal({
           ) : (
             /* Booking Form */
             <div className="space-y-4">
+              {/* Selected Specialist Profile & Designation Card */}
+              {selectedPro && (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-brand-50 via-indigo-50/50 to-brand-50/40 border border-brand-200 shadow-sm space-y-2.5 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-brand-700 bg-white px-2.5 py-0.5 rounded-full border border-brand-200 flex items-center gap-1">
+                      <Award className="w-3 h-3 text-brand-600" />
+                      Selected Specialist
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                      Verified Professional
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3.5">
+                    <div className="relative shrink-0">
+                      <img
+                        src={selectedPro.avatar}
+                        alt={selectedPro.name}
+                        className="w-13 h-13 rounded-2xl object-cover border-2 border-white shadow-sm"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-black text-slate-900 truncate">
+                          {selectedPro.name}
+                        </h4>
+                        <span className="flex items-center gap-0.5 text-xs font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 shrink-0">
+                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                          {selectedPro.rating}
+                        </span>
+                      </div>
+                      {/* Prominent Designation / Title of the person */}
+                      <p className="text-xs font-bold text-brand-700 leading-tight mt-0.5">
+                        {selectedPro.role}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        {selectedPro.city} • {selectedPro.experienceYears} Years Exp • {selectedPro.jobsCompleted}+ Jobs Completed
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedPro.specialty && (
+                    <div className="text-[11px] text-slate-600 bg-white/90 p-2 rounded-xl border border-brand-100 leading-relaxed">
+                      <span className="font-bold text-slate-700">Specialty: </span>
+                      {selectedPro.specialty}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Selected Service Card */}
               <div className="p-3.5 rounded-2xl bg-brand-50/50 border border-brand-100 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
