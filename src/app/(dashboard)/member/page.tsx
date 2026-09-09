@@ -69,9 +69,6 @@ export default async function MemberDashboard() {
     requests = MOCK_REQUESTS.filter(
       (r) => r.memberId === user.userId || r.member?.name === user.name
     );
-    if (requests.length === 0) {
-      requests = MOCK_REQUESTS.slice(0, 3);
-    }
     communityRequests = MOCK_REQUESTS.filter((r) => r.visibility === "COMMUNITY").slice(0, 3);
   }
 

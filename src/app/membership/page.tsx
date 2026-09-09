@@ -66,7 +66,7 @@ export default function MembershipPage() {
 
       <main className="flex-1 pb-24">
         {/* Premium Dark Hero */}
-        <section className="bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950 text-white pt-12 pb-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <section className="bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950 text-white pt-6 sm:pt-8 pb-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           {/* Ambient glow */}
           <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-400/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-10 w-96 h-96 bg-brand-500/15 rounded-full blur-3xl pointer-events-none" />

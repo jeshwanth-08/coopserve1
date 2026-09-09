@@ -53,7 +53,7 @@ export default function PackagesPage() {
 
       <main className="flex-1 pb-20">
         {/* Hero Header */}
-        <section className="bg-gradient-to-b from-brand-900 via-slate-900 to-slate-950 text-white pt-12 pb-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <section className="bg-gradient-to-b from-brand-900 via-slate-900 to-slate-950 text-white pt-6 sm:pt-8 pb-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
           <div className="max-w-7xl mx-auto relative z-10 text-center">
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-black uppercase tracking-wider mb-4">

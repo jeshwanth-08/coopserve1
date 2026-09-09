@@ -30,6 +30,7 @@ import {
   findCategoryBySlug,
   findMatchingServiceForCategory,
   ServiceItem,
+  CategoryDetail,
 } from "@/lib/homeData";
 
 
@@ -55,11 +56,20 @@ export default function CategoryDetailPage() {
   }, []);
 
   // Check if slug matches a single specific service directly or a category
-  const directService = POPULAR_SERVICES.find(
-    (s) => s.id === slug || s.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").includes(slug.toLowerCase())
-  );
+  const directService =
+    POPULAR_SERVICES.find(
+      (s) =>
+        s.id === slug ||
+        s.slug === slug ||
+        s.categorySlug === slug ||
+        s.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === slug.toLowerCase() ||
+        s.name.toLowerCase() === slug.toLowerCase()
+    ) || findMatchingServiceForCategory(slug);
 
-  const matchedCategory = initialCategory || (directService ? findCategoryBySlug(directService.categorySlug) : undefined);
+  const matchedCategory =
+    initialCategory ||
+    findCategoryBySlug(slug) ||
+    (directService ? findCategoryBySlug(directService.categorySlug) || findCategoryBySlug(directService.slug) : undefined);
 
   if (!matchedCategory && !directService) {
     return (
@@ -80,7 +90,7 @@ export default function CategoryDetailPage() {
           </div>
           <h1 className="text-2xl font-black text-slate-900">Service Not Found</h1>
           <p className="text-xs text-slate-500">
-            We couldn't find a service or category matching "{slug}". Explore our full range of 12 core disciplines below.
+            We couldn't find a service or category matching "{slug}". Explore our full range of cooperative disciplines below.
           </p>
           <Link
             href="/#categories"
@@ -95,7 +105,33 @@ export default function CategoryDetailPage() {
     );
   }
 
-  const activeCategory = matchedCategory || CATEGORIES[0];
+  const activeCategory: CategoryDetail = matchedCategory || (directService ? {
+    id: `cat-${directService.slug}`,
+    title: directService.category || directService.name,
+    slug: directService.categorySlug || directService.slug,
+    aliases: [directService.slug, directService.category.toLowerCase()],
+    tagline: directService.description,
+    heroHeadline: `Professional Doorstep ${directService.name} Services`,
+    iconName: "Sparkles",
+    image: directService.image,
+    coverBanner: directService.image,
+    popularServices: [directService.name],
+    startingPrice: directService.price,
+    badge: directService.badge || "Verified",
+    description: directService.description,
+    whatsIncluded: directService.includes || [],
+    whatsNotIncluded: directService.excludes || [],
+    processSteps: [
+      { title: "Booking Confirmation", desc: "Cooperative professional assigned instantly." },
+      { title: "Doorstep Service", desc: "Standardized tools, safety checks and verified execution." },
+      { title: "Quality Guarantee", desc: "30-day rework warranty with cashless or online payment." }
+    ],
+    faqs: [
+      { q: `What is included in the ${directService.name} service?`, a: directService.description },
+      { q: "Is there a rework warranty?", a: "Yes, all our services come with a 30-day cooperative rework guarantee." }
+    ]
+  } : CATEGORIES[0]);
+
   const category = activeCategory;
   const featuredService =
     directService ||
@@ -114,6 +150,7 @@ export default function CategoryDetailPage() {
   // Filter services belonging to this category or fallback
   const categoryServices = POPULAR_SERVICES.filter(
     (s) =>
+      s.id === featuredService.id ||
       s.categorySlug === activeCategory.slug ||
       s.slug === activeCategory.slug ||
       activeCategory.aliases.includes(s.slug) ||
@@ -121,9 +158,8 @@ export default function CategoryDetailPage() {
       s.category.toLowerCase().includes(activeCategory.title.toLowerCase())
   );
 
-
   const otherServices = POPULAR_SERVICES.filter(
-    (s) => s.categorySlug !== activeCategory.slug
+    (s) => s.categorySlug !== activeCategory.slug && s.id !== featuredService.id
   ).slice(0, 4);
 
   const categoryReviews = CUSTOMER_REVIEWS.filter(
@@ -132,7 +168,7 @@ export default function CategoryDetailPage() {
   const displayReviews = categoryReviews.length > 0 ? categoryReviews : CUSTOMER_REVIEWS.slice(0, 3);
 
   const handleOpenBooking = (service?: ServiceItem) => {
-    const target = service || featuredService || categoryServices[0] || POPULAR_SERVICES[0];
+    const target = service || featuredService || directService || categoryServices[0] || POPULAR_SERVICES[0];
     if (!currentUser) {
       router.push(`/login?returnUrl=${encodeURIComponent(`/book/${target.id}`)}`);
       return;
@@ -289,7 +325,7 @@ export default function CategoryDetailPage() {
                   <span>What's Included in {category.title}</span>
                 </div>
                 <ul className="space-y-3">
-                  {category.whatsIncluded.map((item, idx) => (
+                  {category.whatsIncluded.map((item: string, idx: number) => (
                     <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <span>{item}</span>
@@ -305,7 +341,7 @@ export default function CategoryDetailPage() {
                   <span>What's Not Included</span>
                 </div>
                 <ul className="space-y-3">
-                  {category.whatsNotIncluded.map((item, idx) => (
+                  {category.whatsNotIncluded.map((item: string, idx: number) => (
                     <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
                       <XCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                       <span>{item}</span>
@@ -329,7 +365,7 @@ export default function CategoryDetailPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {category.processSteps.map((step, idx) => (
+            {category.processSteps.map((step: any, idx: number) => (
               <div
                 key={idx}
                 className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-2 card-hover-effect"
@@ -357,7 +393,7 @@ export default function CategoryDetailPage() {
             </div>
 
             <div className="space-y-3">
-              {category.faqs.map((faq, idx) => {
+              {category.faqs.map((faq: any, idx: number) => {
                 const isOpen = faqOpenIndex === idx;
                 return (
                   <div

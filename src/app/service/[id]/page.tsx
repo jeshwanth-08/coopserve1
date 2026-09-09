@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -31,11 +31,16 @@ import {
   CUSTOMER_REVIEWS,
   TOP_PROFESSIONALS,
   ServiceItem,
+  findMatchingServiceForCategory,
 } from "@/lib/homeData";
 
+interface ServiceDetailPageProps {
+  params: { id: string };
+}
+
 export default function ServiceDetailPage() {
-  const params = useParams();
   const router = useRouter();
+  const params = useParams();
   const serviceId = (params?.id as string) || "svc-1";
 
   const [selectedCity, setSelectedCity] = useState("Bengaluru");
@@ -46,7 +51,16 @@ export default function ServiceDetailPage() {
   const [beforeAfterTab, setBeforeAfterTab] = useState<"after" | "before">("after");
 
   const service =
-    POPULAR_SERVICES.find((s) => s.id === serviceId || s.slug === serviceId) || POPULAR_SERVICES[0];
+    POPULAR_SERVICES.find(
+      (s) =>
+        s.id === serviceId ||
+        s.slug === serviceId ||
+        s.categorySlug === serviceId ||
+        s.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === serviceId.toLowerCase() ||
+        s.name.toLowerCase() === serviceId.toLowerCase()
+    ) ||
+    findMatchingServiceForCategory(serviceId) ||
+    POPULAR_SERVICES[0];
 
 
   const similarServices = POPULAR_SERVICES.filter(
@@ -101,7 +115,7 @@ export default function ServiceDetailPage() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-6 pb-12 w-full">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 mb-6">
           <Link href="/" className="hover:text-brand-600 transition-colors">

@@ -39,7 +39,7 @@ export default function ServicesDirectoryPage() {
 
       <main className="flex-1 pb-20">
         {/* SEO H1 Hero Header */}
-        <section className="bg-slate-900 text-white pt-12 pb-16 px-4 sm:px-6 lg:px-8">
+        <section className="bg-slate-900 text-white pt-6 sm:pt-8 pb-12 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto text-center space-y-4">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 text-xs font-black uppercase tracking-wider">
               <Sparkles className="w-4 h-4" />

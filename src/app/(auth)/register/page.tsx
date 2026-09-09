@@ -21,7 +21,7 @@ function RegisterForm() {
   const [locality, setLocality] = useState<string>(LOCALITIES[0]);
 
   // Provider specific
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([CATEGORIES[0]]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [skills, setSkills] = useState("");
   const [serviceArea, setServiceArea] = useState("");
 
@@ -30,9 +30,7 @@ function RegisterForm() {
 
   const handleCategoryToggle = (cat: string) => {
     if (selectedCategories.includes(cat)) {
-      if (selectedCategories.length > 1) {
-        setSelectedCategories(selectedCategories.filter((c) => c !== cat));
-      }
+      setSelectedCategories(selectedCategories.filter((c) => c !== cat));
     } else {
       setSelectedCategories([...selectedCategories, cat]);
     }
@@ -55,6 +53,11 @@ function RegisterForm() {
       };
 
       if (role === "PROVIDER") {
+        if (selectedCategories.length === 0) {
+          setError("Please select at least one trade category.");
+          setLoading(false);
+          return;
+        }
         payload.serviceCategories = selectedCategories;
         payload.skills = skills
           .split(",")
@@ -97,14 +100,16 @@ function RegisterForm() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-xl text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 text-white shadow-md mb-3">
-          <Users className="w-6 h-6" />
-        </div>
-        <h2 className="text-2xl font-extrabold text-slate-900">
-          Join the Cooperative
-        </h2>
-        <p className="mt-1 text-sm text-slate-600">
+      <div className="sm:mx-auto sm:w-full sm:max-w-xl text-center flex flex-col items-center">
+        <Link href="/" className="inline-block transition-transform hover:scale-105 mb-2" title="CoopServe Home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="CoopServe Logo"
+            className="h-14 w-auto object-contain mx-auto"
+          />
+        </Link>
+        <p className="mt-1 text-xs text-slate-500 font-medium">
           Register as a community member or certified local service provider
         </p>
       </div>

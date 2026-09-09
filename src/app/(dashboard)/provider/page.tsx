@@ -72,6 +72,12 @@ function ProviderDashboardContent() {
   const [documents, setDocuments] = useState(INITIAL_DOCUMENTS);
   const [reviews, setReviews] = useState(INITIAL_REVIEWS);
 
+  // Custom service creation state
+  const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
+  const [newServiceName, setNewServiceName] = useState("");
+  const [newServicePrice, setNewServicePrice] = useState("299");
+  const [newServiceDuration, setNewServiceDuration] = useState("45 mins");
+
   // Dynamic user & profile state
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [currentProfile, setCurrentProfile] = useState<any>(null);
@@ -83,6 +89,8 @@ function ProviderDashboardContent() {
   const [profileArea, setProfileArea] = useState("");
   const [profileExp, setProfileExp] = useState("8 Years");
   const [profileBio, setProfileBio] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
 
   // Load authenticated user and profile
   useEffect(() => {
@@ -270,7 +278,9 @@ function ProviderDashboardContent() {
   const designation = React.useMemo(() => {
     if (parsedSkills.length > 0) return parsedSkills[0];
     if (parsedCategories.length > 0) return `${parsedCategories[0]} Specialist`;
-    const lower = providerName.toLowerCase();
+    const lower = (providerName + " " + parsedCategories.join(" ")).toLowerCase();
+    if (lower.includes("garden") || lower.includes("plant") || lower.includes("lawn")) return "Master Horticulturist & Garden Specialist";
+    if (lower.includes("cook") || lower.includes("chef")) return "Executive Home Chef";
     if (lower.includes("sunita") || lower.includes("beauty")) return "Beauty & Salon Specialist";
     if (lower.includes("marcus") || lower.includes("electric")) return "Master Electrician";
     if (lower.includes("david") || lower.includes("plumb")) return "Journeyman Plumber";
@@ -289,6 +299,12 @@ function ProviderDashboardContent() {
   // Dynamic avatar selection based on provider identity
   const avatarUrl = React.useMemo(() => {
     const lower = (providerName + " " + parsedCategories.join(" ")).toLowerCase();
+    if (lower.includes("garden") || lower.includes("plant") || lower.includes("lawn")) {
+      return "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=200&q=80";
+    }
+    if (lower.includes("cook") || lower.includes("chef")) {
+      return "https://images.unsplash.com/photo-1577219491135-ce391730fb2c?auto=format&fit=crop&w=200&q=80";
+    }
     if (lower.includes("sunita") || lower.includes("salon") || lower.includes("beauty")) {
       return "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80";
     }
@@ -309,8 +325,18 @@ function ProviderDashboardContent() {
       setProfileArea(currentProfile?.serviceArea || currentUser.locality || "Greenwood Heights");
       setProfileDesignation(designation);
 
-      const lower = (currentUser.name || "").toLowerCase();
-      if (lower.includes("sunita") || lower.includes("beauty")) {
+      const lower = (currentUser.name + " " + parsedCategories.join(" ")).toLowerCase();
+      if (lower.includes("garden") || lower.includes("plant") || lower.includes("lawn")) {
+        setProfileExp("8 Years");
+        setProfileBio(
+          "Certified horticulturist and landscape specialist in lawn mowing, hedge trimming, organic soil nourishment, and balcony potted plant care."
+        );
+      } else if (lower.includes("cook") || lower.includes("chef")) {
+        setProfileExp("7 Years");
+        setProfileBio(
+          "Professional home chef specializing in authentic regional North and South Indian cuisines, dietary customization, and high culinary hygiene."
+        );
+      } else if (lower.includes("sunita") || lower.includes("beauty")) {
         setProfileExp("7 Years");
         setProfileBio(
           "Certified cosmetologist and esthetician specializing in bridal makeover, HD party makeup, scalp therapies, and organic facial treatments."
@@ -329,7 +355,7 @@ function ProviderDashboardContent() {
         setProfileBio("Certified cooperative maintenance specialist dedicated to high-quality craftsmanship.");
       }
     }
-  }, [currentUser, currentProfile, designation]);
+  }, [currentUser, currentProfile, designation, parsedCategories]);
 
   // Adapt demo jobs according to logged in provider's profession
   useEffect(() => {
@@ -497,8 +523,92 @@ function ProviderDashboardContent() {
         { id: "srv-e3", name: "Ceiling Fan & Chandelier Hookup", category: "Electrician", baseLaborRate: 299, duration: "30 min", active: true },
         { id: "srv-e4", name: "EV Charger & Heavy Load Connection", category: "Electrician", baseLaborRate: 899, duration: "90 min", active: true },
       ]);
+    } else if (lower.includes("garden") || lower.includes("plant") || lower.includes("lawn")) {
+      setJobs([
+        {
+          id: "JOB-801",
+          customerName: "Pooja Hegde",
+          customerPhone: "+91 98765 44321",
+          serviceName: "Balcony Potted Plant Pruning & Organic Feeding",
+          category: "Gardener",
+          address: "Flat 402, Block B, Greenwood Heights",
+          locality: "Greenwood Heights",
+          city: "Bengaluru",
+          date: "Today",
+          timeSlot: "10:30 AM",
+          issueDescription: "Balcony garden topsoil aeration, trimming yellow leaves, and organic neem pest spray.",
+          uploadedPhotos: [],
+          price: 299,
+          status: "ON_THE_WAY",
+          paymentStatus: "PENDING",
+          warranty: "30-Day Plant Vitality Guarantee",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 08:30 AM", note: "Customer booking" },
+            { status: "ACCEPTED", timestamp: "Today, 08:45 AM", note: "Accepted by specialist" },
+            { status: "ON_THE_WAY", timestamp: "Today, 09:40 AM", note: "Dispatched with tools and manure" },
+          ],
+        },
+        {
+          id: "JOB-802",
+          customerName: "Vikram Malhotra",
+          customerPhone: "+91 98111 22334",
+          serviceName: "Lawn Mowing & Hedge Trimming Session",
+          category: "Gardener",
+          address: "Villa 18, Palm Meadows",
+          locality: "Whitefield",
+          city: "Bengaluru",
+          date: "Today",
+          timeSlot: "02:30 PM",
+          issueDescription: "Front lawn grass mowing and neat hedge boundary alignment.",
+          uploadedPhotos: [],
+          price: 499,
+          status: "ACCEPTED",
+          paymentStatus: "PENDING",
+          warranty: "Clean Bagging & Edging Guarantee",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 10:15 AM", note: "Scheduled morning" },
+            { status: "ACCEPTED", timestamp: "Today, 10:30 AM", note: "Accepted by specialist" },
+          ],
+        },
+      ]);
+      setServices([
+        { id: "srv-g1", name: "Lawn Mowing & Turf Trimming", category: "Gardener", baseLaborRate: 299, duration: "45 min", active: true },
+        { id: "srv-g2", name: "Organic Soil Aeration & Neem Pest Spray", category: "Gardener", baseLaborRate: 349, duration: "45 min", active: true },
+        { id: "srv-g3", name: "Balcony Garden Makeover & Potting", category: "Gardener", baseLaborRate: 499, duration: "60 min", active: true },
+        { id: "srv-g4", name: "Hedge Shaping & Shrub Trimming", category: "Gardener", baseLaborRate: 399, duration: "45 min", active: true },
+      ]);
+    } else if (lower.includes("cook") || lower.includes("chef")) {
+      setJobs([
+        {
+          id: "JOB-901",
+          customerName: "Arun Verma",
+          customerPhone: "+91 98222 33445",
+          serviceName: "Fresh Daily Dinner Cooking (3 Dishes)",
+          category: "Cook",
+          address: "Tower 2, Sobha Morzaria",
+          locality: "JP Nagar",
+          city: "Bengaluru",
+          date: "Today",
+          timeSlot: "06:30 PM",
+          issueDescription: "Chapati, Paneer Butter Masala, and Dal Tadka for family of 4.",
+          uploadedPhotos: [],
+          price: 349,
+          status: "ACCEPTED",
+          paymentStatus: "PENDING",
+          warranty: "100% Hygiene Guarantee",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 11:30 AM", note: "Evening dinner request" },
+            { status: "ACCEPTED", timestamp: "Today, 11:45 AM", note: "Accepted by chef" },
+          ],
+        },
+      ]);
+      setServices([
+        { id: "srv-c1", name: "Daily Meal Preparation (Lunch/Dinner)", category: "Cook", baseLaborRate: 349, duration: "60 min", active: true },
+        { id: "srv-c2", name: "Healthy Low-Oil Diet Meal Prep", category: "Cook", baseLaborRate: 399, duration: "60 min", active: true },
+        { id: "srv-c3", name: "Weekend Party Feast Cooking", category: "Cook", baseLaborRate: 699, duration: "90 min", active: true },
+      ]);
     }
-  }, [currentUser]);
+  }, [currentUser, parsedCategories]);
 
   // Filters for today's jobs
   const [todayFilter, setTodayFilter] = useState<"ALL" | "ACTIVE" | "COMPLETED">("ALL");
@@ -2004,19 +2114,75 @@ function ProviderDashboardContent() {
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h2 className="text-xl font-black text-slate-900">Offered Services Catalog</h2>
+                <h2 className="text-xl font-black text-slate-900">Offered Services & Trade Catalog</h2>
                 <p className="text-xs text-slate-500">
-                  Manage active services, custom base labor pricing, and standard duration.
+                  Manage your active services, customize your base labor prices, and add new trade skills.
                 </p>
               </div>
               <button
-                onClick={() => alert("New custom service modal")}
-                className="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center gap-1.5"
+                onClick={() => setIsAddServiceOpen(!isAddServiceOpen)}
+                className="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add Skill</span>
+                <span>{isAddServiceOpen ? "Close Form" : "Add Custom Service"}</span>
               </button>
             </div>
+
+            {/* Custom Service Creation Form */}
+            {isAddServiceOpen && (
+              <div className="p-4 rounded-2xl bg-brand-50/50 border border-brand-200 space-y-3 animate-in fade-in">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-brand-900">
+                  Add New Custom Service to Your Profile
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-slate-500">Service Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Balcony Garden Revamp, Organic Soil Conditioning"
+                      value={newServiceName}
+                      onChange={(e) => setNewServiceName(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-semibold text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-slate-500">Base Labor (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="299"
+                      value={newServicePrice}
+                      onChange={(e) => setNewServicePrice(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-bold text-slate-800"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] text-slate-500">
+                    Category: <strong className="text-brand-700">{parsedCategories[0] || "Specialist"}</strong>
+                  </span>
+                  <button
+                    disabled={!newServiceName.trim()}
+                    onClick={() => {
+                      if (!newServiceName.trim()) return;
+                      const newSrv = {
+                        id: `srv-custom-${Date.now()}`,
+                        name: newServiceName.trim(),
+                        category: parsedCategories[0] || "Custom Trade",
+                        baseLaborRate: parseInt(newServicePrice) || 299,
+                        duration: newServiceDuration || "45 mins",
+                        active: true,
+                      };
+                      setServices([newSrv, ...services]);
+                      setNewServiceName("");
+                      setIsAddServiceOpen(false);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-xs font-bold shadow-sm"
+                  >
+                    Save Service
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden bg-white">
               {services.map((srv, idx) => (
@@ -2030,21 +2196,39 @@ function ProviderDashboardContent() {
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Base Labor</span>
-                      <span className="text-sm font-black text-slate-900">₹{srv.baseLaborRate}</span>
+                    <div className="text-right flex items-center gap-2">
+                      <span className="text-[10px] uppercase font-bold text-slate-400">Base Labor:</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-slate-500 font-bold">₹</span>
+                        <input
+                          type="number"
+                          value={srv.baseLaborRate}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            const updated = [...services];
+                            updated[idx].baseLaborRate = val;
+                            setServices(updated);
+                          }}
+                          className="w-20 px-2 py-1 border border-slate-200 rounded-lg text-xs font-black text-slate-900 focus:ring-1 focus:ring-brand-500 outline-none text-right"
+                        />
+                      </div>
                     </div>
 
-                    <input
-                      type="checkbox"
-                      checked={srv.active}
-                      onChange={() => {
-                        const updated = [...services];
-                        updated[idx].active = !updated[idx].active;
-                        setServices(updated);
-                      }}
-                      className="w-4 h-4 rounded text-brand-600"
-                    />
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={srv.active}
+                        onChange={() => {
+                          const updated = [...services];
+                          updated[idx].active = !updated[idx].active;
+                          setServices(updated);
+                        }}
+                        className="w-4 h-4 rounded text-brand-600 cursor-pointer"
+                      />
+                      <span className="text-[10px] font-semibold text-slate-500">
+                        {srv.active ? "Active" : "Paused"}
+                      </span>
+                    </label>
                   </div>
                 </div>
               ))}
@@ -2057,11 +2241,18 @@ function ProviderDashboardContent() {
       {activeTab === "profile" && (
         <div className="space-y-6 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-            <div className="border-b border-slate-100 pb-4">
-              <h2 className="text-xl font-black text-slate-900">Professional Profile</h2>
-              <p className="text-xs text-slate-500">
-                Public specialist credentials, contact info, and experience biography.
-              </p>
+            <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-black text-slate-900">Professional Profile</h2>
+                <p className="text-xs text-slate-500">
+                  Public specialist credentials, trade designation, and service area.
+                </p>
+              </div>
+              {profileSaveSuccess && (
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full animate-in fade-in">
+                  ✓ Profile Saved!
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
@@ -2118,10 +2309,29 @@ function ProviderDashboardContent() {
 
             <div className="flex justify-end pt-2">
               <button
-                onClick={() => alert("Profile updated successfully!")}
-                className="px-6 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800"
+                disabled={isSavingProfile}
+                onClick={async () => {
+                  try {
+                    setIsSavingProfile(true);
+                    await fetch("/api/providers/profile", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        skills: [profileDesignation],
+                        serviceArea: profileArea,
+                      }),
+                    });
+                    setProfileSaveSuccess(true);
+                    setTimeout(() => setProfileSaveSuccess(false), 3000);
+                  } catch (e) {
+                    console.error("Failed to save profile:", e);
+                  } finally {
+                    setIsSavingProfile(false);
+                  }
+                }}
+                className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs shadow-sm transition-all"
               >
-                Save Changes
+                {isSavingProfile ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>

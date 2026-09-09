@@ -41,6 +41,7 @@ import {
   INDIAN_CITIES,
   ServiceItem,
   getMatchingServiceForPro,
+  findMatchingServiceForCategory,
 } from "@/lib/homeData";
 import { createBooking } from "@/lib/bookingService";
 import { validateCoupon } from "@/lib/adminData";
@@ -109,10 +110,19 @@ function BookingPageContent() {
     if (matchingPro && (!serviceId || serviceId === "svc-1")) {
       return getMatchingServiceForPro(matchingPro);
     }
-    return (
-      POPULAR_SERVICES.find((s) => s.id === serviceId || s.slug === serviceId) ||
-      (matchingPro ? getMatchingServiceForPro(matchingPro) : POPULAR_SERVICES[0])
-    );
+    const foundDirect =
+      POPULAR_SERVICES.find(
+        (s) =>
+          s.id === serviceId ||
+          s.slug === serviceId ||
+          s.categorySlug === serviceId ||
+          s.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === serviceId.toLowerCase() ||
+          s.name.toLowerCase() === serviceId.toLowerCase()
+      ) || findMatchingServiceForCategory(serviceId);
+
+    if (foundDirect) return foundDirect;
+    if (matchingPro) return getMatchingServiceForPro(matchingPro);
+    return POPULAR_SERVICES[0];
   });
 
   // Synchronize service when package or service query updates
@@ -143,12 +153,22 @@ function BookingPageContent() {
           : prev
       );
     } else {
-      const found = POPULAR_SERVICES.find((s) => s.id === serviceId || s.slug === serviceId);
+      const found =
+        POPULAR_SERVICES.find(
+          (s) =>
+            s.id === serviceId ||
+            s.slug === serviceId ||
+            s.categorySlug === serviceId ||
+            s.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === serviceId.toLowerCase() ||
+            s.name.toLowerCase() === serviceId.toLowerCase()
+        ) || findMatchingServiceForCategory(serviceId);
       if (found) {
         setService(found);
+      } else if (matchingPro) {
+        setService(getMatchingServiceForPro(matchingPro));
       }
     }
-  }, [serviceId, packageQuery]);
+  }, [serviceId, packageQuery, matchingPro]);
 
   // Stepper: 1: Service, 2: Date & Time, 3: Address, 4: Details & Media, 5: Professional, 6: Checkout
   const [currentStep, setCurrentStep] = useState<number>(2); // Default to Step 2 since service was clicked

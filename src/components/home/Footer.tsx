@@ -22,30 +22,27 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 border-b border-slate-800/80 pb-12">
           {/* Brand Info */}
           <div className="lg:col-span-2 space-y-4">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-brand-500/25">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-extrabold text-xl tracking-tight text-white">
-                  Coop<span className="text-brand-400">Serve</span>
-                </span>
-                <span className="text-[11px] text-slate-400 font-medium -mt-1">
-                  Your home. Taken care of.
-                </span>
-              </div>
+            <Link href="/" className="inline-block bg-white rounded-2xl px-4 py-2.5 shadow-md group transition-transform hover:scale-105" title="CoopServe - Collaborative Service & Community">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.png"
+                alt="CoopServe - Collaborative Service & Community"
+                className="h-10 w-auto object-contain"
+              />
             </Link>
 
             <p className="text-slate-400 leading-relaxed max-w-sm">
-              India's premier home services cooperative connecting households with background-verified, certified professionals with standardized fixed upfront pricing and 30-day rework warranty.
+              India&apos;s premier home services cooperative connecting households with background-verified, certified professionals with standardized fixed upfront pricing and 30-day rework warranty.
             </p>
 
-            <div className="flex items-center gap-4 text-xs text-slate-300">
-              <a href="tel:18004192667" className="flex items-center gap-1.5 hover:text-white">
-                <Phone className="w-3.5 h-3.5 text-brand-400" /> 1800-419-COOP
+            <div className="flex items-center gap-4 text-xs text-slate-300" suppressHydrationWarning>
+              <a href="tel:18004192667" className="flex items-center gap-1.5 hover:text-white" suppressHydrationWarning>
+                <Phone className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                <span>1800-419-COOP</span>
               </a>
-              <a href="mailto:help@coopserve.in" className="flex items-center gap-1.5 hover:text-white">
-                <Mail className="w-3.5 h-3.5 text-brand-400" /> help@coopserve.in
+              <a href="mailto:help@coopserve.in" className="flex items-center gap-1.5 hover:text-white" suppressHydrationWarning>
+                <Mail className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                <span>help@coopserve.in</span>
               </a>
             </div>
 
@@ -54,35 +51,35 @@ export default function Footer() {
               <a href="https://twitter.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
                 Twitter
               </a>
-              <span>�</span>
+              <span>&bull;</span>
               <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
                 Instagram
               </a>
-              <span>�</span>
+              <span>&bull;</span>
               <a href="https://linkedin.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
                 LinkedIn
               </a>
-              <span>�</span>
+              <span>&bull;</span>
               <a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
                 Facebook
               </a>
             </div>
           </div>
 
-          {/* Company */}
+          {/* Company & About Us */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-4">
               Company
             </h4>
             <ul className="space-y-2.5">
               <li>
-                <Link href="/support" className="hover:text-white transition-colors block">
+                <Link href="/support" className="hover:text-white transition-colors block font-semibold text-slate-200">
                   About Us
                 </Link>
               </li>
               <li>
                 <Link href="/support" className="hover:text-white transition-colors block">
-                  Careers (We're Hiring)
+                  Careers (We&apos;re Hiring)
                 </Link>
               </li>
               <li>
@@ -101,6 +98,30 @@ export default function Footer() {
                 </Link>
               </li>
             </ul>
+
+            {/* Download Option Near About Us */}
+            <div className="mt-5 pt-4 border-t border-slate-800/80 space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 block">
+                Get Mobile App
+              </span>
+              <a
+                href="/CoopServe.apk"
+                download="CoopServe.apk"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-bold text-[11px] transition-all group"
+              >
+                <Download className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+                <span>Download .APK</span>
+              </a>
+              <div>
+                <Link
+                  href="/download/app"
+                  className="text-[10px] text-slate-400 hover:text-cyan-300 transition-colors inline-flex items-center gap-1"
+                >
+                  <Smartphone className="w-3 h-3 text-slate-500" />
+                  <span>Scan QR / PWA Guide →</span>
+                </Link>
+              </div>
+            </div>
           </div>
 
           {/* Services & Support */}
@@ -110,14 +131,22 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5">
               <li>
-                <Link href="/support" className="hover:text-white transition-colors block">
-                  Help Center
-                </Link>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent("open-support-chat"))}
+                  className="hover:text-white transition-colors block text-left"
+                >
+                  24/7 AI Help Center
+                </button>
               </li>
               <li>
-                <Link href="/support" className="hover:text-white transition-colors block">
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent("open-support-chat"))}
+                  className="hover:text-white transition-colors block text-left"
+                >
                   Raise Support Ticket
-                </Link>
+                </button>
               </li>
               <li>
                 <Link href="/notifications" className="hover:text-white transition-colors block">
@@ -210,7 +239,7 @@ export default function Footer() {
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-slate-400">
             {INDIAN_CITIES.map((c) => (
               <span key={c.name} className="hover:text-slate-200 cursor-pointer">
-                <strong>{c.name}:</strong> {c.localities.join(" � ")}
+                <strong>{c.name}:</strong> {c.localities.join(" • ")}
               </span>
             ))}
           </div>
@@ -219,15 +248,15 @@ export default function Footer() {
         {/* Bottom Bar: Copyright & Payment badges */}
         <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-slate-500">
           <div className="flex items-center gap-2">
-            <span>� 2026 CoopServe Technologies Pvt. Ltd. All rights reserved.</span>
+            <span>&copy; 2026 CoopServe Technologies Pvt. Ltd. All rights reserved.</span>
           </div>
 
           <div className="flex items-center gap-4 text-[11px]">
             <span className="flex items-center gap-1 text-emerald-400 font-semibold">
               <ShieldCheck className="w-3.5 h-3.5" /> 100% Secure Checkout
             </span>
-            <span>�</span>
-            <span>UPI � RuPay � Visa � Mastercard � NetBanking</span>
+            <span>&bull;</span>
+            <span>UPI &bull; RuPay &bull; Visa &bull; Mastercard &bull; NetBanking</span>
           </div>
         </div>
       </div>

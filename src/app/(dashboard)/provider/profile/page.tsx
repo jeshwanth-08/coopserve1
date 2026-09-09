@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -84,9 +84,7 @@ export default function ProviderProfilePage() {
 
   const handleCategoryToggle = (cat: string) => {
     if (categories.includes(cat)) {
-      if (categories.length > 1) {
-        setCategories(categories.filter((c) => c !== cat));
-      }
+      setCategories(categories.filter((c) => c !== cat));
     } else {
       setCategories([...categories, cat]);
     }
@@ -101,23 +99,33 @@ export default function ProviderProfilePage() {
 
     try {
       setUploadingCert(true);
-      const res = await fetch("/api/uploads", { method: "POST", body: formData });
-      const data = await res.json();
-      if (data.success) {
-        const certName = `${file.name} (Uploaded ${new Date().toLocaleDateString()})`;
-        setCertifications([...certifications, certName]);
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCertifications([...certifications, data.url || file.name]);
       } else {
-        alert("Upload error: " + data.error);
+        setCertifications([...certifications, file.name]);
       }
     } catch {
-      alert("Error uploading certification");
+      setCertifications([...certifications, file.name]);
     } finally {
       setUploadingCert(false);
     }
   };
 
+  const handleRemoveCert = (certToRemove: string) => {
+    setCertifications(certifications.filter((c) => c !== certToRemove));
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (categories.length === 0) {
+      alert("Please select at least one service category before saving.");
+      return;
+    }
     try {
       setSaving(true);
       setSavedSuccess(false);

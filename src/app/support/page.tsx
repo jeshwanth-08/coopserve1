@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -192,7 +192,7 @@ export default function SupportPage() {
 
       <main className="flex-1 pb-20">
         {/* Support Header */}
-        <section className="bg-gradient-to-b from-brand-900 via-slate-900 to-slate-950 text-white pt-12 pb-20 px-4 sm:px-6 lg:px-8 relative">
+        <section className="bg-gradient-to-b from-brand-900 via-slate-900 to-slate-950 text-white pt-6 sm:pt-8 pb-16 px-4 sm:px-6 lg:px-8 relative">
           <div className="max-w-5xl mx-auto text-center relative z-10 space-y-4">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 text-xs font-black uppercase tracking-wider">
               <HelpCircle className="w-4 h-4" />
