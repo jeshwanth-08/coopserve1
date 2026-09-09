@@ -35,12 +35,14 @@ export default function Footer() {
               India's premier home services cooperative connecting households with background-verified, certified professionals with standardized fixed upfront pricing and 30-day rework warranty.
             </p>
 
-            <div className="flex items-center gap-4 text-xs text-slate-300">
-              <a href="tel:18004192667" className="flex items-center gap-1.5 hover:text-white">
-                <Phone className="w-3.5 h-3.5 text-brand-400" /> 1800-419-COOP
+            <div className="flex items-center gap-4 text-xs text-slate-300" suppressHydrationWarning>
+              <a href="tel:18004192667" className="flex items-center gap-1.5 hover:text-white" suppressHydrationWarning>
+                <Phone className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                <span>1800-419-COOP</span>
               </a>
-              <a href="mailto:help@coopserve.in" className="flex items-center gap-1.5 hover:text-white">
-                <Mail className="w-3.5 h-3.5 text-brand-400" /> help@coopserve.in
+              <a href="mailto:help@coopserve.in" className="flex items-center gap-1.5 hover:text-white" suppressHydrationWarning>
+                <Mail className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                <span>help@coopserve.in</span>
               </a>
             </div>
 
@@ -49,15 +51,15 @@ export default function Footer() {
               <a href="https://twitter.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
                 Twitter
               </a>
-              <span>�</span>
+              <span>&bull;</span>
               <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
                 Instagram
               </a>
-              <span>�</span>
+              <span>&bull;</span>
               <a href="https://linkedin.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
                 LinkedIn
               </a>
-              <span>�</span>
+              <span>&bull;</span>
               <a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
                 Facebook
               </a>
@@ -229,7 +231,7 @@ export default function Footer() {
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-slate-400">
             {INDIAN_CITIES.map((c) => (
               <span key={c.name} className="hover:text-slate-200 cursor-pointer">
-                <strong>{c.name}:</strong> {c.localities.join(" � ")}
+                <strong>{c.name}:</strong> {c.localities.join(" • ")}
               </span>
             ))}
           </div>
@@ -238,15 +240,15 @@ export default function Footer() {
         {/* Bottom Bar: Copyright & Payment badges */}
         <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-slate-500">
           <div className="flex items-center gap-2">
-            <span>� 2026 CoopServe Technologies Pvt. Ltd. All rights reserved.</span>
+            <span>&copy; 2026 CoopServe Technologies Pvt. Ltd. All rights reserved.</span>
           </div>
 
           <div className="flex items-center gap-4 text-[11px]">
             <span className="flex items-center gap-1 text-emerald-400 font-semibold">
               <ShieldCheck className="w-3.5 h-3.5" /> 100% Secure Checkout
             </span>
-            <span>�</span>
-            <span>UPI � RuPay � Visa � Mastercard � NetBanking</span>
+            <span>&bull;</span>
+            <span>UPI &bull; RuPay &bull; Visa &bull; Mastercard &bull; NetBanking</span>
           </div>
         </div>
       </div>
