@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { Suspense } from "react";
 import Link from "next/link";
@@ -31,7 +31,7 @@ function BookingConfirmationContent() {
         onOpenBooking={() => {}}
       />
 
-      <main className="flex-1 py-12 px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto w-full">
+      <main className="flex-1 pt-6 sm:pt-8 pb-12 px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto w-full">
         <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-xl text-center space-y-6">
           <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-8 h-8" />

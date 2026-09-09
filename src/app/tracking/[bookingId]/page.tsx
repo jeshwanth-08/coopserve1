@@ -124,7 +124,7 @@ export default function TrackingPage() {
         onOpenBooking={() => {}}
       />
 
-      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
+      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-6 pb-12 w-full space-y-6">
         {/* Top Header Banner */}
         {!isCancelled ? (
           <div className="bg-gradient-to-r from-brand-900 via-indigo-900 to-slate-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 border border-brand-500/30 relative overflow-hidden">

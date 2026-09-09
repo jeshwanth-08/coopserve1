@@ -40,7 +40,7 @@ export default function ProfessionalProfilePage() {
         onOpenBooking={() => router.push(`/book/${targetServiceId}?pro=${pro.id}`)}
       />
 
-      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full space-y-6">
+      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-6 pb-12 w-full space-y-6">
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900"

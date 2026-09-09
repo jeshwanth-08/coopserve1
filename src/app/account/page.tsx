@@ -124,7 +124,7 @@ export default function CustomerAccountDashboard() {
         onOpenBooking={() => router.push("/book/svc-1")}
       />
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-6 pb-12 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left: Customer Navigation Sidebar */}
           <div className="lg:col-span-3 bg-white rounded-3xl border border-slate-200 p-5 shadow-sm space-y-4 sticky top-24">

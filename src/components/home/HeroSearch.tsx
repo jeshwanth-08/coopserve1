@@ -87,7 +87,7 @@ export default function HeroSearch({
   const { t } = useLanguage();
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-brand-50/70 via-white to-slate-50 pt-5 sm:pt-8 pb-8 sm:pb-12 border-b border-slate-200/70">
+    <section className="relative overflow-hidden bg-gradient-to-b from-brand-50/70 via-white to-slate-50 pt-3 sm:pt-5 pb-8 sm:pb-12 border-b border-slate-200/70">
       {/* Background ambient gradient blurs */}
       <div className="absolute top-0 right-1/4 w-96 h-96 bg-brand-200/40 rounded-full blur-3xl pointer-events-none -z-10" />
       <div className="absolute bottom-10 left-1/6 w-80 h-80 bg-amber-200/30 rounded-full blur-3xl pointer-events-none -z-10" />
