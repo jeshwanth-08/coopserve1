@@ -1,4 +1,4 @@
-﻿import { POPULAR_SERVICES, ServiceItem, TOP_PROFESSIONALS, ProProfile } from "./homeData";
+import { POPULAR_SERVICES, ServiceItem, TOP_PROFESSIONALS, ProProfile } from "./homeData";
 
 export interface BookingPayload {
   serviceId: string;
@@ -105,6 +105,7 @@ export async function createBooking(payload: BookingPayload): Promise<{ success:
         address: `${payload.address}, ${payload.locality}, ${payload.city}`,
         isEmergency: payload.isEmergency,
         preferredDateTime: new Date().toISOString(),
+        selectedProviderId: payload.preferredProId,
       }),
     });
   } catch (err) {

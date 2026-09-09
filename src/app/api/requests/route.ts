@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { ROLES, REQUEST_STATUS } from "@/lib/constants";
 import { createNotification } from "@/lib/notifications";
 import { MOCK_REQUESTS } from "@/lib/mockDb";
+import { autoAssignProvider } from "@/lib/providerAssignmentService";
 
 export const dynamic = "force-dynamic";
 
@@ -123,7 +124,12 @@ export async function POST(req: Request) {
       address,
       isEmergency = false,
       preferredDateTime,
+      selectedProviderId,
+      preferredProviderId,
+      providerId,
     } = body;
+
+    const requestedProviderId = selectedProviderId || preferredProviderId || providerId || null;
 
     if (!category || !description || !address) {
       return NextResponse.json(
@@ -160,23 +166,48 @@ export async function POST(req: Request) {
       },
     });
 
+    // Run Automated Service Provider Assignment System
+    const assignmentResult = await autoAssignProvider(newRequest.id, requestedProviderId);
+
     // Notify coordinators/admins
     const admins = await prisma.user.findMany({
       where: { role: ROLES.ADMIN },
     });
 
     for (const admin of admins) {
+      let adminMsg = "";
+      if (assignmentResult.assigned && assignmentResult.provider) {
+        adminMsg = isEmergency
+          ? `[EMERGENCY - AUTO-ASSIGNED] ${category} at ${targetLocality} assigned to ${assignmentResult.provider.name}.`
+          : `New ${category} request at ${targetLocality} automatically assigned to ${assignmentResult.provider.name}.`;
+      } else {
+        adminMsg = isEmergency
+          ? `[EMERGENCY - UNASSIGNED] New ${category} request at ${targetLocality} requires coordinator dispatch.`
+          : `New ${category} request submitted at ${targetLocality} (Pending Dispatch).`;
+      }
+
       await createNotification({
         userId: admin.id,
         type: isEmergency ? "COMMUNITY_ALERT" : "STATUS_CHANGE",
-        message: isEmergency
-          ? `[EMERGENCY] New ${category} request at ${targetLocality}: "${description.slice(0, 50)}..."`
-          : `New ${category} request submitted at ${targetLocality}.`,
+        message: adminMsg,
         link: `/admin/requests`,
       });
     }
 
-    return NextResponse.json({ success: true, request: newRequest }, { status: 201 });
+    // Return the updated request record
+    const finalRequest = await prisma.serviceRequest.findUnique({
+      where: { id: newRequest.id },
+      include: {
+        assignedProvider: {
+          select: { id: true, name: true, phone: true, locality: true },
+        },
+      },
+    });
+
+    return NextResponse.json(
+      { success: true, request: finalRequest || newRequest, assignment: assignmentResult },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("POST request error:", error);
     return NextResponse.json({ error: "Failed to create service request" }, { status: 500 });

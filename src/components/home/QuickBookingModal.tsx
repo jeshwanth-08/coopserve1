@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   X,
   Calendar,
@@ -36,6 +37,8 @@ export default function QuickBookingModal({
   selectedCity,
   selectedLocality,
 }: QuickBookingModalProps) {
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
   const [selectedService, setSelectedService] = useState<ServiceItem>(
     initialService || POPULAR_SERVICES[0]
   );
@@ -51,6 +54,24 @@ export default function QuickBookingModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [bookingId, setBookingId] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : { user: null }))
+      .then((data) => {
+        if (data?.user) {
+          setCurrentUser(data.user);
+          if (data.user.name) setCustomerName(data.user.name);
+          if (data.user.phone) setCustomerPhone(data.user.phone);
+          if (data.user.address) setAddress(data.user.address);
+          if (data.user.locality) setLocality(data.user.locality);
+        } else {
+          setCurrentUser(null);
+        }
+      })
+      .catch(() => setCurrentUser(null));
+  }, [isOpen]);
 
   useEffect(() => {
     if (initialService) {
@@ -71,6 +92,15 @@ export default function QuickBookingModal({
   if (!isOpen) return null;
 
   const handleConfirmBooking = async () => {
+    // Unauthenticated booking is invalid: direct to sign in page with choice of interest
+    if (!currentUser) {
+      const proParam = selectedPro ? `?pro=${encodeURIComponent(selectedPro.name)}` : "";
+      const targetUrl = `/book/${selectedService.id}${proParam}`;
+      onClose();
+      router.push(`/login?returnUrl=${encodeURIComponent(targetUrl)}`);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       // Simulate booking creation or make direct API call

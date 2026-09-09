@@ -1,4 +1,4 @@
-﻿# CoopServe • Cooperative Gig & Household Services Platform
+# CoopServe • Cooperative Gig & Household Services Platform
 
 > A neighborhood-first, community-driven gig services and dispatch platform connecting households with verified, licensed local specialists through transparent cooperative governance.
 
@@ -146,6 +146,72 @@ vercel
 # 3. Deploy to production
 vercel --prod
 ```
+
+---
+
+## 🔐 Google OAuth Sign-In Setup Guide
+
+CoopServe integrates Google OAuth authentication via **NextAuth.js (Auth.js)**. Brand new Google sign-ins are automatically registered as **`MEMBER`** in the unified `User` database model (ensuring non-self-registerable `ADMIN` and `PROVIDER` roles remain protected).
+
+### Google Cloud Console Setup Checklist
+
+Follow these steps to obtain OAuth 2.0 credentials:
+
+- [ ] **Step 1: Open Google Cloud Console**
+  - Navigate to [Google Cloud Console](https://console.cloud.google.com/).
+  - Create a new project (e.g., `CoopServe Platform`) or select an existing project.
+
+- [ ] **Step 2: Configure the OAuth Consent Screen**
+  - Go to **APIs & Services** ➔ **OAuth consent screen**.
+  - Choose User Type: **External** and click **Create**.
+  - App Name: `CoopServe`
+  - User support email: Select your email.
+  - Developer contact information: Enter your email.
+  - Scopes: Ensure `openid`, `.../auth/userinfo.email`, and `.../auth/userinfo.profile` are enabled.
+  - Add test users if your project is in Testing status.
+
+- [ ] **Step 3: Create OAuth 2.0 Client Credentials**
+  - Go to **APIs & Services** ➔ **Credentials**.
+  - Click **+ CREATE CREDENTIALS** ➔ **OAuth client ID**.
+  - Application type: **Web application**.
+  - Name: `CoopServe Web Client`.
+
+- [ ] **Step 4: Configure Authorized JavaScript Origins**
+  - Under **Authorized JavaScript origins**, click **+ ADD URI**:
+    ```text
+    http://localhost:3000
+    ```
+    *(When deploying to production, add your live custom domain here, e.g. `https://coopserve.com`)*
+
+- [ ] **Step 5: Configure Authorized Redirect URIs (CRITICAL)**
+  - Under **Authorized redirect URIs**, click **+ ADD URI**:
+    ```text
+    http://localhost:3000/api/auth/callback/google
+    ```
+    > [!IMPORTANT]
+    > **Exact Path Required**: NextAuth requires this precise route (`/api/auth/callback/google`). Do **not** append a trailing slash.
+
+- [ ] **Step 6: Copy Credentials into `.env.local`**
+  - Copy the generated **Client ID** and **Client Secret** into your `.env.local` file:
+    ```env
+    GOOGLE_CLIENT_ID=your-client-id-here.apps.googleusercontent.com
+    GOOGLE_CLIENT_SECRET=your-client-secret-here
+    NEXTAUTH_URL=http://localhost:3000
+    NEXTAUTH_SECRET=your-32-byte-base64-secret
+    ```
+
+- [ ] **Step 7: Restart the Dev Server**
+  - Stop and restart Next.js so changes in `.env.local` take effect:
+    ```bash
+    npm run dev
+    ```
+
+### Common Troubleshooting: `redirect_uri_mismatch`
+If you encounter a `redirect_uri_mismatch` error during Google OAuth:
+1. Verify that the redirect URI in Google Cloud Console matches `NEXTAUTH_URL + /api/auth/callback/google` character-for-character.
+2. Check for missing or extra trailing slashes: `http://localhost:3000/api/auth/callback/google` (No slash at the end).
+3. Ensure port number matches: if Next.js booted on port `3001` because port `3000` was busy, update both `NEXTAUTH_URL` and Google Cloud Console.
+4. Ensure protocol matches: `http://` for local development, `https://` for production.
 
 ---
 

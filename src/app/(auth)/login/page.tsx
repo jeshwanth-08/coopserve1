@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Users, Lock, Mail, ArrowRight, AlertCircle, KeyRound } from "lucide-react";
 import { DEMO_ACCOUNTS } from "@/components/DemoAccountSwitcher";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 function LoginForm() {
   const router = useRouter();
@@ -74,8 +75,8 @@ function LoginForm() {
           returnUrl.startsWith("/auth") ||
           returnUrl.startsWith("/register");
 
-        router.push(!isSelfAuthUrl ? returnUrl : data.redirectUrl);
-        router.refresh();
+        const target = !isSelfAuthUrl ? returnUrl : data.redirectUrl;
+        window.location.href = target;
       } else {
         setError(data.error || "Quick login failed");
       }
@@ -103,6 +104,13 @@ function LoginForm() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
         <div className="bg-white py-8 px-6 shadow-xl shadow-slate-200/50 rounded-2xl sm:px-10 border border-slate-200/80">
           <form className="space-y-4" onSubmit={handleSubmit}>
+            {returnUrl && (returnUrl.includes("/book") || returnUrl.includes("/booking")) && (
+              <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-center gap-2.5 text-blue-900 text-xs font-medium">
+                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0 animate-pulse" />
+                <span>Please sign in to complete your booking. You'll be returned directly to your chosen service!</span>
+              </div>
+            )}
+
             {error && (
               <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-center gap-2 text-rose-700 text-xs">
                 <AlertCircle className="w-4 h-4 shrink-0" />
@@ -159,6 +167,19 @@ function LoginForm() {
             </button>
           </form>
 
+          {/* Social OAuth / Google Sign-In */}
+          <div className="mt-5">
+            <div className="relative flex items-center justify-center mb-4">
+              <div className="border-t border-slate-200 w-full" />
+              <span className="bg-white px-3 text-xs uppercase font-medium text-slate-400 shrink-0">
+                Or continue with
+              </span>
+              <div className="border-t border-slate-200 w-full" />
+            </div>
+
+            <GoogleSignInButton returnUrl={returnUrl} text="Continue with Google" />
+          </div>
+
           {/* Quick 1-Click Demo Login Personas */}
           <div className="mt-6 pt-6 border-t border-slate-200">
             <div className="flex items-center justify-between mb-3">
@@ -205,7 +226,7 @@ function LoginForm() {
           <p className="mt-6 text-center text-xs text-slate-600">
             Don't have an account?{" "}
             <Link
-              href="/register"
+              href={returnUrl ? `/register?returnUrl=${encodeURIComponent(returnUrl)}` : "/register"}
               className="font-semibold text-blue-600 hover:text-blue-700 hover:underline"
             >
               Register here

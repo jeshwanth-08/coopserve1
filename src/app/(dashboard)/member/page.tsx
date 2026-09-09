@@ -15,6 +15,7 @@ import {
 import StatCard from "@/components/StatCard";
 import StatusBadge from "@/components/StatusBadge";
 import UrgencyBadge from "@/components/UrgencyBadge";
+import MaintenanceDashboardWidget from "@/components/maintenance/MaintenanceDashboardWidget";
 
 import { MOCK_REQUESTS } from "@/lib/mockDb";
 
@@ -67,6 +68,18 @@ export default async function MemberDashboard() {
   );
   const resolvedCount = requests.filter((r) => r.status === "RESOLVED").length;
   const emergencyCount = requests.filter((r) => r.isEmergency).length;
+
+  // Extract completed service history for Smart Maintenance Scheduler (serialized safely for client)
+  const completedRequests = requests
+    .filter((r) => r.status === "RESOLVED" || r.status === "CONFIRMED" || Boolean(r.resolvedAt))
+    .map((r) => ({
+      id: r.id,
+      category: r.category,
+      description: r.description,
+      status: r.status,
+      createdAt: typeof r.createdAt === "object" && r.createdAt?.toISOString ? r.createdAt.toISOString() : String(r.createdAt || ""),
+      resolvedAt: r.resolvedAt ? (typeof r.resolvedAt === "object" && r.resolvedAt?.toISOString ? r.resolvedAt.toISOString() : String(r.resolvedAt)) : null,
+    }));
 
   return (
     <div className="space-y-6">
@@ -127,6 +140,9 @@ export default async function MemberDashboard() {
           color="purple"
         />
       </div>
+
+      {/* Smart Household Maintenance AMC & Revisit Scheduler */}
+      <MaintenanceDashboardWidget completedRequests={completedRequests} />
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -171,6 +171,11 @@ export default function Sidebar({ role }: SidebarProps) {
             exact: true,
           },
           {
+            href: "/member/maintenance",
+            label: "Maintenance & AMC",
+            icon: Calendar,
+          },
+          {
             href: "/member/community",
             label: "Community Feed",
             icon: Users2,

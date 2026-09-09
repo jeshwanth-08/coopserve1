@@ -16,19 +16,19 @@ export const DEMO_ACCOUNTS = [
   },
   {
     role: "PROVIDER",
-    label: "Professional AC Specialist",
-    name: "Rahul",
-    email: "rahul.ac@coop.org",
-    detail: "Master AC Technician (★ 4.9)",
+    label: "Beauty & Salon Provider",
+    name: "Sunita Sharma",
+    email: "sunita.beauty@coop.org",
+    detail: "Women's Salon & Spa Specialist (★ 4.8)",
     icon: Wrench,
-    color: "text-teal-600 bg-teal-50 hover:bg-teal-100",
+    color: "text-pink-600 bg-pink-50 hover:bg-pink-100",
   },
   {
     role: "PROVIDER",
     label: "Electrician Provider",
     name: "Marcus Thorne",
     email: "provider1@coop.org",
-    detail: "Master Electrician (Verified)",
+    detail: "Master Electrician (★ 4.9)",
     icon: Wrench,
     color: "text-blue-600 bg-blue-50 hover:bg-blue-100",
   },
@@ -37,7 +37,7 @@ export const DEMO_ACCOUNTS = [
     label: "Plumber Provider",
     name: "David Chen",
     email: "provider2@coop.org",
-    detail: "Journeyman Plumber (Verified)",
+    detail: "Journeyman Plumber (★ 4.8)",
     icon: Wrench,
     color: "text-indigo-600 bg-indigo-50 hover:bg-indigo-100",
   },
@@ -77,11 +77,17 @@ export default function DemoAccountSwitcher() {
       const data = await res.json();
       if (data.success) {
         setIsOpen(false);
-        router.push(data.redirectUrl);
-        router.refresh();
+        if (window.location.pathname === data.redirectUrl) {
+          window.location.reload();
+        } else {
+          window.location.href = data.redirectUrl;
+        }
+      } else {
+        alert(data.error || "Failed to switch persona");
       }
     } catch (err) {
       console.error("Failed to quick switch:", err);
+      alert("Failed to quick switch persona.");
     } finally {
       setSwitching(false);
     }

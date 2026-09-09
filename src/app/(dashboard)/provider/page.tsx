@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
@@ -64,6 +64,39 @@ function ProviderDashboardContent() {
   const [documents, setDocuments] = useState(INITIAL_DOCUMENTS);
   const [reviews, setReviews] = useState(INITIAL_REVIEWS);
 
+  // Dynamic user & profile state
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentProfile, setCurrentProfile] = useState<any>(null);
+
+  // Profile editable fields
+  const [profileName, setProfileName] = useState("");
+  const [profileDesignation, setProfileDesignation] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [profileArea, setProfileArea] = useState("");
+  const [profileExp, setProfileExp] = useState("8 Years");
+  const [profileBio, setProfileBio] = useState("");
+
+  // Load authenticated user and profile
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) {
+            setCurrentUser(data.user);
+            if (data.user.providerProfile) {
+              setCurrentProfile(data.user.providerProfile);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load user:", e);
+      }
+    }
+    loadUser();
+  }, []);
+
   // Sync tab with URL if param changes
   useEffect(() => {
     if (searchParams?.get("tab")) {
@@ -87,6 +120,266 @@ function ProviderDashboardContent() {
     else if (hour < 17) setGreeting("Good afternoon");
     else setGreeting("Good evening");
   }, []);
+
+  // Parse skills and categories
+  const parsedSkills: string[] = React.useMemo(() => {
+    if (!currentProfile?.skills) return [];
+    try {
+      return Array.isArray(currentProfile.skills)
+        ? currentProfile.skills
+        : JSON.parse(currentProfile.skills);
+    } catch {
+      return [currentProfile.skills];
+    }
+  }, [currentProfile]);
+
+  const parsedCategories: string[] = React.useMemo(() => {
+    if (!currentProfile?.serviceCategories) return [];
+    try {
+      return Array.isArray(currentProfile.serviceCategories)
+        ? currentProfile.serviceCategories
+        : JSON.parse(currentProfile.serviceCategories);
+    } catch {
+      return [currentProfile.serviceCategories];
+    }
+  }, [currentProfile]);
+
+  const providerName = currentUser?.name || "Service Specialist";
+  const firstName = providerName.split(" ")[0] || "Specialist";
+
+  // Dynamic trade designation
+  const designation = React.useMemo(() => {
+    if (parsedSkills.length > 0) return parsedSkills[0];
+    if (parsedCategories.length > 0) return `${parsedCategories[0]} Specialist`;
+    const lower = providerName.toLowerCase();
+    if (lower.includes("sunita") || lower.includes("beauty")) return "Beauty & Salon Specialist";
+    if (lower.includes("marcus") || lower.includes("electric")) return "Master Electrician";
+    if (lower.includes("david") || lower.includes("plumb")) return "Journeyman Plumber";
+    return "Verified Service Specialist";
+  }, [parsedSkills, parsedCategories, providerName]);
+
+  const serviceAreaDisplay =
+    currentProfile?.serviceArea || currentUser?.locality || "Greenwood Heights & Local Society";
+  const ratingDisplay = currentProfile?.avgRating
+    ? `★ ${Number(currentProfile.avgRating).toFixed(1)} Rating`
+    : "★ 4.9 Rating";
+  const jobsCountDisplay = currentProfile?.totalReviews
+    ? `(${currentProfile.totalReviews}+ Jobs)`
+    : "(35+ Jobs)";
+
+  // Dynamic avatar selection based on provider identity
+  const avatarUrl = React.useMemo(() => {
+    const lower = (providerName + " " + parsedCategories.join(" ")).toLowerCase();
+    if (lower.includes("sunita") || lower.includes("salon") || lower.includes("beauty")) {
+      return "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80";
+    }
+    if (lower.includes("david") || lower.includes("plumb")) {
+      return "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80";
+    }
+    if (lower.includes("marcus") || lower.includes("electric")) {
+      return "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80";
+    }
+    return "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=200&q=80";
+  }, [providerName, parsedCategories]);
+
+  // Sync profile fields when user/profile loads
+  useEffect(() => {
+    if (currentUser) {
+      setProfileName(currentUser.name || "");
+      setProfilePhone(currentUser.phone || "+1 555-0201");
+      setProfileArea(currentProfile?.serviceArea || currentUser.locality || "Greenwood Heights");
+      setProfileDesignation(designation);
+
+      const lower = (currentUser.name || "").toLowerCase();
+      if (lower.includes("sunita") || lower.includes("beauty")) {
+        setProfileExp("7 Years");
+        setProfileBio(
+          "Certified cosmetologist and esthetician specializing in bridal makeover, HD party makeup, scalp therapies, and organic facial treatments."
+        );
+      } else if (lower.includes("david") || lower.includes("plumb")) {
+        setProfileExp("9 Years");
+        setProfileBio(
+          "Licensed Journeyman Plumber specializing in residential leak diagnostics, hot water systems, high-pressure line snaking, and fixture replacements."
+        );
+      } else if (lower.includes("marcus") || lower.includes("electric")) {
+        setProfileExp("10 Years");
+        setProfileBio(
+          "Licensed Master Electrician specializing in residential circuit rewiring, main distribution panels, surge suppression, and solar hookups."
+        );
+      } else {
+        setProfileBio("Certified cooperative maintenance specialist dedicated to high-quality craftsmanship.");
+      }
+    }
+  }, [currentUser, currentProfile, designation]);
+
+  // Adapt demo jobs according to logged in provider's profession
+  useEffect(() => {
+    if (!currentUser) return;
+    const lower = (currentUser.name + " " + (parsedCategories[0] || "")).toLowerCase();
+    if (lower.includes("sunita") || lower.includes("salon") || lower.includes("beauty")) {
+      setJobs([
+        {
+          id: "JOB-501",
+          customerName: "Alice Henderson",
+          customerPhone: "+1 555-0301",
+          serviceName: "Bridal Glow Facial & Spa Care",
+          category: "Women's Salon & Spa",
+          address: "Apartment 4B, Greenwood Heights",
+          locality: "Greenwood Heights",
+          city: "Greenwood Heights",
+          date: "Today",
+          timeSlot: "11:00 AM",
+          issueDescription: "Pre-event premium organic glow facial treatment and scalp therapy.",
+          uploadedPhotos: [],
+          price: 1299,
+          status: "ON_THE_WAY",
+          paymentStatus: "PENDING",
+          warranty: "100% Satisfaction Guarantee",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 09:30 AM", note: "Customer preference booking" },
+            { status: "ACCEPTED", timestamp: "Today, 09:45 AM", note: "Accepted by Sunita Sharma" },
+            { status: "ON_THE_WAY", timestamp: "Today, 10:20 AM", note: "Dispatched to client residence" },
+          ],
+        },
+        {
+          id: "JOB-502",
+          customerName: "Elena Rostova",
+          customerPhone: "+1 555-0305",
+          serviceName: "Hair Styling & Mehendi Art Session",
+          category: "Beauty",
+          address: "Villa 12, Riverside Society",
+          locality: "Riverside Society",
+          city: "Riverside Society",
+          date: "Today",
+          timeSlot: "02:30 PM",
+          issueDescription: "Full hand traditional mehendi and blowout hair styling.",
+          uploadedPhotos: [],
+          price: 899,
+          status: "ACCEPTED",
+          paymentStatus: "PENDING",
+          warranty: "CoopServe Clean Touch Guarantee",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 10:15 AM", note: "Scheduled session" },
+            { status: "ACCEPTED", timestamp: "Today, 10:30 AM", note: "Accepted by Sunita Sharma" },
+          ],
+        },
+      ]);
+      setServices([
+        { id: "srv-b1", name: "Bridal & Party Makeup", category: "Women's Salon & Spa", baseLaborRate: 999, duration: "90 min", active: true },
+        { id: "srv-b2", name: "Organic Glow Facial Treatment", category: "Women's Salon & Spa", baseLaborRate: 699, duration: "60 min", active: true },
+        { id: "srv-b3", name: "Hair Spa & Scalp Therapy", category: "Beauty", baseLaborRate: 599, duration: "45 min", active: true },
+        { id: "srv-b4", name: "Traditional Mehendi Art", category: "Beauty", baseLaborRate: 499, duration: "60 min", active: true },
+      ]);
+    } else if (lower.includes("david") || lower.includes("plumb")) {
+      setJobs([
+        {
+          id: "JOB-601",
+          customerName: "Alice Henderson",
+          customerPhone: "+1 555-0301",
+          serviceName: "Emergency Pipe Leak & Valve Repair",
+          category: "Plumber",
+          address: "Apartment 4B, Greenwood Heights",
+          locality: "Greenwood Heights",
+          city: "Greenwood Heights",
+          date: "Today",
+          timeSlot: "10:30 AM",
+          issueDescription: "High pressure kitchen pipe joint dripping heavily under the sink.",
+          uploadedPhotos: [],
+          price: 450,
+          status: "ON_THE_WAY",
+          paymentStatus: "PENDING",
+          warranty: "30-Day CoopServe Protection Guarantee",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 08:30 AM", note: "Auto-dispatched emergency" },
+            { status: "ACCEPTED", timestamp: "Today, 08:45 AM", note: "Accepted by David Chen" },
+            { status: "ON_THE_WAY", timestamp: "Today, 09:50 AM", note: "On the way with plumbing toolkit" },
+          ],
+        },
+        {
+          id: "JOB-602",
+          customerName: "Elena Rostova",
+          customerPhone: "+1 555-0305",
+          serviceName: "Bathroom Drain Snaking & De-clog",
+          category: "Plumber",
+          address: "Villa 12, Riverside Society",
+          locality: "Riverside Society",
+          city: "Riverside Society",
+          date: "Today",
+          timeSlot: "02:00 PM",
+          issueDescription: "Slow drainage in master bath shower drain.",
+          uploadedPhotos: [],
+          price: 380,
+          status: "ACCEPTED",
+          paymentStatus: "PENDING",
+          warranty: "30-Day CoopServe Protection Guarantee",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 11:00 AM", note: "Regular dispatch" },
+            { status: "ACCEPTED", timestamp: "Today, 11:15 AM", note: "Accepted by David Chen" },
+          ],
+        },
+      ]);
+      setServices([
+        { id: "srv-p1", name: "Emergency Pipe Leak Repair", category: "Plumber", baseLaborRate: 399, duration: "45 min", active: true },
+        { id: "srv-p2", name: "High-Pressure Drain Snaking", category: "Plumber", baseLaborRate: 349, duration: "45 min", active: true },
+        { id: "srv-p3", name: "Water Heater Installation", category: "Plumber", baseLaborRate: 699, duration: "60 min", active: true },
+        { id: "srv-p4", name: "Bathroom Fixture Replacement", category: "Plumber", baseLaborRate: 299, duration: "30 min", active: true },
+      ]);
+    } else if (lower.includes("marcus") || lower.includes("electric")) {
+      setJobs([
+        {
+          id: "JOB-701",
+          customerName: "Alice Henderson",
+          customerPhone: "+1 555-0301",
+          serviceName: "Main Breaker Tripping & Rewiring",
+          category: "Electrician",
+          address: "Apartment 4B, Greenwood Heights",
+          locality: "Greenwood Heights",
+          city: "Greenwood Heights",
+          date: "Today",
+          timeSlot: "10:00 AM",
+          issueDescription: "Circuit breaker trips immediately when microwave and AC are powered together.",
+          uploadedPhotos: [],
+          price: 520,
+          status: "ON_THE_WAY",
+          paymentStatus: "PENDING",
+          warranty: "60-Day Electrical Safety Warranty",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 08:15 AM", note: "Auto-assigned specialist" },
+            { status: "ACCEPTED", timestamp: "Today, 08:30 AM", note: "Accepted by Marcus Thorne" },
+            { status: "ON_THE_WAY", timestamp: "Today, 09:45 AM", note: "En route with multimeters and safety gear" },
+          ],
+        },
+        {
+          id: "JOB-702",
+          customerName: "Elena Rostova",
+          customerPhone: "+1 555-0305",
+          serviceName: "Modular Smart Switches Installation",
+          category: "Electrician",
+          address: "Villa 12, Riverside Society",
+          locality: "Riverside Society",
+          city: "Riverside Society",
+          date: "Today",
+          timeSlot: "03:30 PM",
+          issueDescription: "Install 4 WiFi smart switches in living room and balcony.",
+          uploadedPhotos: [],
+          price: 490,
+          status: "ACCEPTED",
+          paymentStatus: "PENDING",
+          warranty: "60-Day Electrical Safety Warranty",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 10:00 AM", note: "Scheduled install" },
+            { status: "ACCEPTED", timestamp: "Today, 10:20 AM", note: "Accepted by Marcus Thorne" },
+          ],
+        },
+      ]);
+      setServices([
+        { id: "srv-e1", name: "Main Circuit Breaker & Panel Check", category: "Electrician", baseLaborRate: 449, duration: "60 min", active: true },
+        { id: "srv-e2", name: "Modular Switch & Socket Rewiring", category: "Electrician", baseLaborRate: 349, duration: "45 min", active: true },
+        { id: "srv-e3", name: "Ceiling Fan & Chandelier Hookup", category: "Electrician", baseLaborRate: 299, duration: "30 min", active: true },
+        { id: "srv-e4", name: "EV Charger & Heavy Load Connection", category: "Electrician", baseLaborRate: 899, duration: "90 min", active: true },
+      ]);
+    }
+  }, [currentUser]);
 
   // Filters for today's jobs
   const [todayFilter, setTodayFilter] = useState<"ALL" | "ACTIVE" | "COMPLETED">("ALL");
@@ -157,8 +450,8 @@ function ProviderDashboardContent() {
         <div className="flex items-center gap-4">
           <div className="relative">
             <img
-              src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=200&q=80"
-              alt="Rahul"
+              src={avatarUrl}
+              alt={providerName}
               className="w-16 h-16 rounded-2xl object-cover border-2 border-brand-500 shadow-md"
             />
             <span
@@ -170,17 +463,17 @@ function ProviderDashboardContent() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                {greeting}, Rahul 👋
+                {greeting}, {firstName} 👋
               </h1>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-800 border border-teal-200">
                 <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
-                Master AC Specialist
+                {designation}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
-              <span>Bengaluru Hub (Indiranagar & East)</span>
+              <span>{serviceAreaDisplay}</span>
               <span>•</span>
-              <span className="text-emerald-600 font-semibold">★ 4.9 Rating (420+ Jobs)</span>
+              <span className="text-emerald-600 font-semibold">{ratingDisplay} {jobsCountDisplay}</span>
             </p>
           </div>
         </div>
@@ -505,7 +798,7 @@ function ProviderDashboardContent() {
               <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 text-teal-900 flex items-center gap-3 text-xs">
                 <Award className="w-5 h-5 text-teal-600 shrink-0" />
                 <div>
-                  <p className="font-bold">Rahul qualifies for ₹3,000 monthly high-performer bonus!</p>
+                  <p className="font-bold">{firstName} qualifies for ₹3,000 monthly high-performer bonus!</p>
                   <p className="text-[11px] text-teal-700">Maintain &gt;96% completion until Sep 30.</p>
                 </div>
               </div>
@@ -991,7 +1284,7 @@ function ProviderDashboardContent() {
                     <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-xs space-y-1">
                       <span className="font-bold text-teal-900 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-teal-600" />
-                        <span>Rahul's Reply</span>
+                        <span>{firstName}'s Reply</span>
                       </span>
                       <p className="text-teal-800">{rev.providerReply}</p>
                     </div>
@@ -1237,17 +1530,19 @@ function ProviderDashboardContent() {
                 <label className="font-bold text-slate-700">Full Name</label>
                 <input
                   type="text"
-                  defaultValue="Rahul Sharma"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-900"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">Designation</label>
+                <label className="font-bold text-slate-700">Designation / Primary Trade</label>
                 <input
                   type="text"
-                  defaultValue="Master AC & Refrigeration Technician"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold"
+                  value={profileDesignation}
+                  onChange={(e) => setProfileDesignation(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-900"
                 />
               </div>
 
@@ -1255,8 +1550,9 @@ function ProviderDashboardContent() {
                 <label className="font-bold text-slate-700">Phone Number</label>
                 <input
                   type="text"
-                  defaultValue="+91 98765 01234"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold"
+                  value={profilePhone}
+                  onChange={(e) => setProfilePhone(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-900"
                 />
               </div>
 
@@ -1264,8 +1560,9 @@ function ProviderDashboardContent() {
                 <label className="font-bold text-slate-700">Years of Experience</label>
                 <input
                   type="text"
-                  defaultValue="8 Years"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold"
+                  value={profileExp}
+                  onChange={(e) => setProfileExp(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-900"
                 />
               </div>
 
@@ -1273,8 +1570,9 @@ function ProviderDashboardContent() {
                 <label className="font-bold text-slate-700">Bio & Specialty Description</label>
                 <textarea
                   rows={3}
-                  defaultValue="Specialized in inverter split systems, Daikin/LG/Voltas PCB diagnostic troubleshooting, leak testing with nitrogen gas, and high-pressure chemical foam coil washing."
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-medium"
+                  value={profileBio}
+                  onChange={(e) => setProfileBio(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-medium text-slate-900"
                 />
               </div>
             </div>

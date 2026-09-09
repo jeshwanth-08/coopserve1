@@ -148,6 +148,35 @@ function BookingPageContent() {
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isVerifyingAuth, setIsVerifyingAuth] = useState(true);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : { user: null }))
+      .then((data) => {
+        if (!isMounted) return;
+        if (!data?.user) {
+          const fullPath = window.location.pathname + window.location.search;
+          router.push(`/login?returnUrl=${encodeURIComponent(fullPath)}`);
+        } else {
+          setIsVerifyingAuth(false);
+          if (data.user.name) setCustomerName(data.user.name);
+          if (data.user.phone) setCustomerPhone(data.user.phone);
+          if (data.user.address) setAddressLine(data.user.address);
+          if (data.user.locality) setLocality(data.user.locality);
+        }
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        const fullPath = window.location.pathname + window.location.search;
+        router.push(`/login?returnUrl=${encodeURIComponent(fullPath)}`);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router]);
 
   const DATES = [
     { label: "Today", sub: "Fastest Slot", day: "Tue" },
@@ -273,6 +302,17 @@ function BookingPageContent() {
     { num: 5, label: "Professional" },
     { num: 6, label: "Checkout" },
   ];
+
+  if (isVerifyingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-slate-500 font-medium">Verifying member sign in...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-brand-500 selection:text-white">
