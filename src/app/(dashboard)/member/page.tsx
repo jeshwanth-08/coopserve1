@@ -12,10 +12,23 @@ import {
   MapPin,
   Calendar,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import StatCard from "@/components/StatCard";
 import StatusBadge from "@/components/StatusBadge";
 import UrgencyBadge from "@/components/UrgencyBadge";
-import MaintenanceDashboardWidget from "@/components/maintenance/MaintenanceDashboardWidget";
+
+const MaintenanceDashboardWidget = dynamic(
+  () => import("@/components/maintenance/MaintenanceDashboardWidget"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm text-center">
+        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+        <p className="text-xs text-slate-400">Loading Maintenance & AMC Scheduler...</p>
+      </div>
+    ),
+  }
+);
 
 import { MOCK_REQUESTS } from "@/lib/mockDb";
 

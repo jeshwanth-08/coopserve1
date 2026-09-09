@@ -33,6 +33,7 @@ export default function MaintenanceDashboardWidget({
   completedRequests,
 }: MaintenanceDashboardWidgetProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [schedule, setSchedule] = useState<ScheduledMaintenanceItem[]>(() =>
     calculateMaintenanceSchedule(completedRequests)
   );
@@ -42,6 +43,7 @@ export default function MaintenanceDashboardWidget({
   const [activeTab, setActiveTab] = useState<"schedule" | "amc">("schedule");
 
   useEffect(() => {
+    setMounted(true);
     // Load dismissed & snoozed states from localStorage
     try {
       const savedDismissed = JSON.parse(
@@ -87,20 +89,26 @@ export default function MaintenanceDashboardWidget({
 
   const now = Date.now();
 
-  // Filter active smart reminders:
+  // Filter active smart reminders only when mounted on client to prevent SSR hydration mismatch:
   // Must be Due Now or Due Soon, not dismissed, and not currently snoozed
-  const activeReminders = schedule.filter((item) => {
-    if (dismissedIds.includes(item.id)) return false;
-    const snoozedUntil = snoozedIds[item.id];
-    if (snoozedUntil && snoozedUntil > now) return false;
-    return item.dueStatus === "DUE_NOW" || item.dueStatus === "DUE_SOON";
-  });
+  const activeReminders = mounted
+    ? schedule.filter((item) => {
+        if (dismissedIds.includes(item.id)) return false;
+        const snoozedUntil = snoozedIds[item.id];
+        if (snoozedUntil && snoozedUntil > now) return false;
+        return item.dueStatus === "DUE_NOW" || item.dueStatus === "DUE_SOON";
+      })
+    : [];
 
-  const formatDate = (d: Date) => {
-    return d.toLocaleDateString("en-IN", {
-      month: "short",
-      year: "numeric",
-    });
+  const MONTH_NAMES = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+
+  const formatDate = (d: Date | string) => {
+    const dateObj = typeof d === "string" ? new Date(d) : d;
+    if (!dateObj || isNaN(dateObj.getTime())) return "";
+    return `${MONTH_NAMES[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
   };
 
   return (
