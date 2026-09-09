@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams, notFound } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import {
   Sparkles,
   Star,
@@ -35,6 +35,7 @@ import {
 
 export default function CategoryDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const slug = (params?.slug as string) || "";
   const initialCategory = findCategoryBySlug(slug);
 
@@ -42,8 +43,16 @@ export default function CategoryDetailPage() {
   const [selectedLocality, setSelectedLocality] = useState("Indiranagar");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
   const [activeServiceForBooking, setActiveServiceForBooking] = useState<ServiceItem | null>(null);
   const [faqOpenIndex, setFaqOpenIndex] = useState<number | null>(0);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : { user: null }))
+      .then((d) => setCurrentUser(d?.user || null))
+      .catch(() => setCurrentUser(null));
+  }, []);
 
   // Check if slug matches a single specific service directly or a category
   const directService = POPULAR_SERVICES.find(
@@ -123,7 +132,12 @@ export default function CategoryDetailPage() {
   const displayReviews = categoryReviews.length > 0 ? categoryReviews : CUSTOMER_REVIEWS.slice(0, 3);
 
   const handleOpenBooking = (service?: ServiceItem) => {
-    setActiveServiceForBooking(service || featuredService || categoryServices[0] || POPULAR_SERVICES[0]);
+    const target = service || featuredService || categoryServices[0] || POPULAR_SERVICES[0];
+    if (!currentUser) {
+      router.push(`/login?returnUrl=${encodeURIComponent(`/book/${target.id}`)}`);
+      return;
+    }
+    setActiveServiceForBooking(target);
     setIsBookingOpen(true);
   };
 

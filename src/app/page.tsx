@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/home/Navbar";
 import MobileBottomNav from "@/components/home/MobileBottomNav";
 import HeroSearch from "@/components/home/HeroSearch";
@@ -25,6 +26,7 @@ import QuickBookingModal from "@/components/home/QuickBookingModal";
 import { POPULAR_SERVICES, ServiceItem, ProProfile, CategoryDetail, findMatchingServiceForCategory, getMatchingServiceForPro } from "@/lib/homeData";
 
 export default function HomePage() {
+  const router = useRouter();
   const [selectedCity, setSelectedCity] = useState("Bengaluru");
   const [selectedLocality, setSelectedLocality] = useState("Indiranagar");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -65,6 +67,15 @@ export default function HomePage() {
   };
 
   const handleOpenBookingWithService = (service?: ServiceItem, pro?: ProProfile) => {
+    // If not signed in, redirect to login and preserve the choice of interest
+    if (!currentUser) {
+      const targetService = service || (pro ? getMatchingServiceForPro(pro) : POPULAR_SERVICES[0]);
+      const proParam = pro ? `?pro=${encodeURIComponent(pro.name)}` : "";
+      const targetUrl = `/book/${targetService.id}${proParam}`;
+      router.push(`/login?returnUrl=${encodeURIComponent(targetUrl)}`);
+      return;
+    }
+
     if (pro) {
       setSelectedProForBooking(pro);
       const matched = service || getMatchingServiceForPro(pro);
@@ -91,6 +102,12 @@ export default function HomePage() {
           category.aliases.includes(s.categorySlug)
       ) ||
       POPULAR_SERVICES[0];
+
+    // If not signed in, redirect to login and preserve the choice of interest
+    if (!currentUser) {
+      router.push(`/login?returnUrl=${encodeURIComponent(`/book/${matched.id}`)}`);
+      return;
+    }
 
     setActiveServiceForBooking(matched);
     setIsBookingOpen(true);

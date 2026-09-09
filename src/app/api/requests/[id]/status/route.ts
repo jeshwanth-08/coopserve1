@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { REQUEST_STATUS, ROLES } from "@/lib/constants";
 import { validateStatusTransition } from "@/lib/transitions";
 import { createNotification } from "@/lib/notifications";
+import { sendSms, SMS_TEMPLATES } from "@/lib/smsGatewayService";
 
 export async function POST(
   req: Request,
@@ -96,6 +97,28 @@ export async function POST(
         : `Your ${request.category} request status has been updated to ${finalStatus}.`,
       link: `/member/requests/${id}`,
     });
+
+    // Dispatch SMS update to customer
+    try {
+      if (request.member?.phone) {
+        let smsMsg = "";
+        if (finalStatus === REQUEST_STATUS.ON_THE_WAY) {
+          smsMsg = SMS_TEMPLATES.onTheWay(user.name || "Co-op Specialist", id.slice(-6).toUpperCase());
+        } else if (finalStatus === REQUEST_STATUS.RESOLVED) {
+          smsMsg = SMS_TEMPLATES.completed(id.slice(-6).toUpperCase());
+        }
+        if (smsMsg) {
+          sendSms({
+            to: request.member.phone,
+            message: smsMsg,
+            type: finalStatus === REQUEST_STATUS.RESOLVED ? "COMPLETED" : "EN_ROUTE",
+            bookingId: id,
+          }).catch(console.error);
+        }
+      }
+    } catch {
+      // Non-blocking SMS dispatch
+    }
 
     return NextResponse.json({ success: true, request: updated });
   } catch (error) {

@@ -73,6 +73,11 @@ model ServiceRequest {
   rating             Rating?
   coSigns            CommunitySupport[]
   comments           RequestComment[]
+
+  poolId             String?
+  pool               SocietyPool?       @relation(fields: [poolId], references: [id])
+  societyName        String?
+  groupCode          String?
 }
 
 model StatusHistory {
@@ -166,6 +171,28 @@ model Booking {
   provider User?   @relation("BookingProvider", fields: [providerId], references: [id])
   service  Service @relation(fields: [serviceId], references: [id])
 
+  poolId      String?
+  pool        SocietyPool? @relation(fields: [poolId], references: [id])
+  societyName String?
+  groupCode   String?
+}
+
+model SocietyPool {
+  id            String   @id @default(cuid())
+  code          String   @unique // e.g. "AC-SAT-15"
+  societyName   String   // e.g. "Prestige Ozone"
+  locality      String   // e.g. "Indiranagar", "Greenwood Heights"
+  category      String   // e.g. "HVAC & AC Technician" or "AC Service"
+  serviceWindow String   // e.g. "Saturday Morning (10:00 AM - 1:00 PM)"
+  date          String?  // e.g. "Saturday" or "2026-09-12"
+  timeSlot      String?  // e.g. "10:30 AM"
+  status        String   @default("OPEN") // OPEN, FULL, SCHEDULED, COMPLETED, CANCELLED
+  maxCapacity   Int      @default(6)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  requests ServiceRequest[]
+  bookings Booking[]
 }
 
 model Offer {

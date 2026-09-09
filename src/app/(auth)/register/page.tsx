@@ -1,13 +1,16 @@
-﻿"use client";
+"use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Users, Lock, Mail, User, Phone, MapPin, Wrench, ArrowRight, AlertCircle } from "lucide-react";
 import { CATEGORIES, LOCALITIES, ROLES } from "@/lib/constants";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get("returnUrl") || "";
 
   const [role, setRole] = useState<"MEMBER" | "PROVIDER">("MEMBER");
   const [name, setName] = useState("");
@@ -75,6 +78,13 @@ export default function RegisterPage() {
 
       if (role === "PROVIDER") {
         router.push("/provider");
+      } else if (
+        returnUrl &&
+        !returnUrl.startsWith("/auth") &&
+        !returnUrl.startsWith("/login") &&
+        !returnUrl.startsWith("/register")
+      ) {
+        router.push(returnUrl);
       } else {
         router.push("/member");
       }
@@ -310,10 +320,23 @@ export default function RegisterPage() {
             </button>
           </form>
 
+          {/* Social OAuth / Google Sign-In */}
+          <div className="mt-5">
+            <div className="relative flex items-center justify-center mb-4">
+              <div className="border-t border-slate-200 w-full" />
+              <span className="bg-white px-3 text-xs uppercase font-medium text-slate-400 shrink-0">
+                Or continue with
+              </span>
+              <div className="border-t border-slate-200 w-full" />
+            </div>
+
+            <GoogleSignInButton returnUrl={returnUrl} text="Sign up with Google (Member)" />
+          </div>
+
           <p className="mt-6 text-center text-xs text-slate-600">
             Already have an account?{" "}
             <Link
-              href="/login"
+              href={returnUrl ? `/login?returnUrl=${encodeURIComponent(returnUrl)}` : "/login"}
               className="font-semibold text-blue-600 hover:text-blue-700 hover:underline"
             >
               Sign in here
@@ -322,5 +345,19 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center text-xs text-slate-400">
+          Loading registration...
+        </div>
+      }
+    >
+      <RegisterForm />
+    </Suspense>
   );
 }

@@ -1,4 +1,4 @@
-﻿import { POPULAR_SERVICES, ServiceItem, TOP_PROFESSIONALS, ProProfile } from "./homeData";
+import { POPULAR_SERVICES, ServiceItem, TOP_PROFESSIONALS, ProProfile } from "./homeData";
 
 export interface BookingPayload {
   serviceId: string;
@@ -18,6 +18,9 @@ export interface BookingPayload {
   preferredProId?: string;
   couponCode?: string;
   discountAmount?: number;
+  societyName?: string;
+  groupCode?: string;
+  poolId?: string;
 }
 
 export interface BookingRecord {
@@ -34,6 +37,9 @@ export interface BookingRecord {
   notes?: string;
   attachments?: string[];
   assignedPro: ProProfile;
+  societyName?: string;
+  groupCode?: string;
+  poolId?: string;
   priceBreakdown: {
     basePrice: number;
     taxes: number;
@@ -72,6 +78,9 @@ export async function createBooking(payload: BookingPayload): Promise<{ success:
     notes: payload.notes,
     attachments: payload.attachments || [],
     assignedPro,
+    societyName: payload.societyName,
+    groupCode: payload.groupCode,
+    poolId: payload.poolId,
     priceBreakdown: {
       basePrice: service.price,
       taxes,
@@ -105,6 +114,10 @@ export async function createBooking(payload: BookingPayload): Promise<{ success:
         address: `${payload.address}, ${payload.locality}, ${payload.city}`,
         isEmergency: payload.isEmergency,
         preferredDateTime: new Date().toISOString(),
+        selectedProviderId: payload.preferredProId,
+        societyName: payload.societyName,
+        groupCode: payload.groupCode,
+        poolId: payload.poolId,
       }),
     });
   } catch (err) {

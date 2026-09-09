@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -161,6 +161,33 @@ export default function TrackingPage() {
             >
               Back to Home
             </Link>
+          </div>
+        )}
+
+        {/* Society Group Pool Banner */}
+        {booking.groupCode && (
+          <div className="bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-400/30 rounded-3xl p-5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-2xl bg-blue-600/60 border border-blue-400/40 text-blue-200 flex items-center justify-center font-bold text-lg shrink-0">
+                🏢
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-sm text-white">
+                    {booking.societyName || "Society Group Pool"}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-blue-500/30 border border-blue-400/40 font-mono font-bold text-[11px] text-blue-200">
+                    {booking.groupCode}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-[10px]">
+                    Zero Doorstep Fee
+                  </span>
+                </div>
+                <p className="text-xs text-blue-200/90 mt-0.5">
+                  Coordinated neighborhood pool • Specialist is handling grouped visits in your society for maximum efficiency.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

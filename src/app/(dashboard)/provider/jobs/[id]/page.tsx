@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -71,6 +71,18 @@ export default function ProviderJobDetailPage() {
   // Reschedule state
   const [rescheduleDate, setRescheduleDate] = useState("Tomorrow");
   const [rescheduleSlot, setRescheduleSlot] = useState("02:30 PM");
+
+  // Technician name
+  const [techName, setTechName] = useState("Technician");
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.user?.name) setTechName(data.user.name);
+      })
+      .catch(() => {});
+  }, []);
 
   // Load Job
   useEffect(() => {
@@ -472,7 +484,7 @@ export default function ProviderJobDetailPage() {
 
             {job.status === "PAUSED" && (
               <button
-                onClick={() => handleApplyTransition("SERVICE_STARTED", "Work resumed by Rahul")}
+                onClick={() => handleApplyTransition("SERVICE_STARTED", `Work resumed by ${techName}`)}
                 className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-1.5"
               >
                 <Play className="w-3.5 h-3.5" />
@@ -826,7 +838,7 @@ export default function ProviderJobDetailPage() {
 
               <button
                 onClick={() => {
-                  alert(`Dispatched automated SMS to ${job.customerPhone}: "Hi ${job.customerName}, I am Rahul your CoopServe technician. On my way! ETA ~15 mins."`);
+                  alert(`Dispatched automated SMS to ${job.customerPhone}: "Hi ${job.customerName}, I am ${techName} your CoopServe specialist. On my way! ETA ~15 mins."`);
                   setShowContactModal(false);
                 }}
                 className="w-full py-2.5 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-800 font-bold text-xs flex items-center justify-center gap-2 border border-brand-200"

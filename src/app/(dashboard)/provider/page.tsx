@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
@@ -34,7 +34,14 @@ import {
   Info,
   Sliders,
   RotateCcw,
+  Car,
+  Hammer,
+  ClipboardList,
+  XCircle,
+  FileCheck,
 } from "lucide-react";
+import StatusBadge from "@/components/StatusBadge";
+import UrgencyBadge from "@/components/UrgencyBadge";
 import {
   ProviderJob,
   INITIAL_PROVIDER_JOBS,
@@ -64,6 +71,117 @@ function ProviderDashboardContent() {
   const [documents, setDocuments] = useState(INITIAL_DOCUMENTS);
   const [reviews, setReviews] = useState(INITIAL_REVIEWS);
 
+  // Dynamic user & profile state
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentProfile, setCurrentProfile] = useState<any>(null);
+
+  // Profile editable fields
+  const [profileName, setProfileName] = useState("");
+  const [profileDesignation, setProfileDesignation] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [profileArea, setProfileArea] = useState("");
+  const [profileExp, setProfileExp] = useState("8 Years");
+  const [profileBio, setProfileBio] = useState("");
+
+  // Load authenticated user and profile
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) {
+            setCurrentUser(data.user);
+            if (data.user.providerProfile) {
+              setCurrentProfile(data.user.providerProfile);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load user:", e);
+      }
+    }
+    loadUser();
+  }, []);
+
+  // Real Member Requests from Database
+  const [assignedRequests, setAssignedRequests] = useState<any[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
+  const [requestActionLoadingId, setRequestActionLoadingId] = useState<string | null>(null);
+  const [resolveModalRequest, setResolveModalRequest] = useState<any | null>(null);
+  const [completionNotes, setCompletionNotes] = useState("");
+  const [declineModalRequest, setDeclineModalRequest] = useState<any | null>(null);
+  const [declineReason, setDeclineReason] = useState("");
+
+  const fetchAssignedRequests = async () => {
+    try {
+      setRequestsLoading(true);
+      const res = await fetch("/api/requests");
+      if (res.ok) {
+        const data = await res.json();
+        setAssignedRequests(data.requests || []);
+      }
+    } catch (err) {
+      console.error("Failed to load assigned requests:", err);
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAssignedRequests();
+  }, [currentUser]);
+
+  const handleRequestRespond = async (requestId: string, action: "ACCEPT" | "DECLINE", reason?: string) => {
+    try {
+      setRequestActionLoadingId(requestId);
+      const res = await fetch(`/api/requests/${requestId}/respond`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, reason }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || `Failed to ${action.toLowerCase()} request`);
+        return;
+      }
+      await fetchAssignedRequests();
+    } catch (err) {
+      alert("Network error processing response");
+    } finally {
+      setRequestActionLoadingId(null);
+      setDeclineModalRequest(null);
+      setDeclineReason("");
+    }
+  };
+
+  const handleRequestUpdateProgress = async (requestId: string, nextStatus: string, notes?: string) => {
+    try {
+      setRequestActionLoadingId(requestId);
+      const res = await fetch(`/api/requests/${requestId}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nextStatus,
+          completionNotes: notes,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || `Failed to update status to ${nextStatus}`);
+        return;
+      }
+      await fetchAssignedRequests();
+    } catch (err) {
+      alert("Network error updating status");
+    } finally {
+      setRequestActionLoadingId(null);
+      setResolveModalRequest(null);
+      setCompletionNotes("");
+    }
+  };
+
+
   // Sync tab with URL if param changes
   useEffect(() => {
     if (searchParams?.get("tab")) {
@@ -87,6 +205,266 @@ function ProviderDashboardContent() {
     else if (hour < 17) setGreeting("Good afternoon");
     else setGreeting("Good evening");
   }, []);
+
+  // Parse skills and categories
+  const parsedSkills: string[] = React.useMemo(() => {
+    if (!currentProfile?.skills) return [];
+    try {
+      return Array.isArray(currentProfile.skills)
+        ? currentProfile.skills
+        : JSON.parse(currentProfile.skills);
+    } catch {
+      return [currentProfile.skills];
+    }
+  }, [currentProfile]);
+
+  const parsedCategories: string[] = React.useMemo(() => {
+    if (!currentProfile?.serviceCategories) return [];
+    try {
+      return Array.isArray(currentProfile.serviceCategories)
+        ? currentProfile.serviceCategories
+        : JSON.parse(currentProfile.serviceCategories);
+    } catch {
+      return [currentProfile.serviceCategories];
+    }
+  }, [currentProfile]);
+
+  const providerName = currentUser?.name || "Service Specialist";
+  const firstName = providerName.split(" ")[0] || "Specialist";
+
+  // Dynamic trade designation
+  const designation = React.useMemo(() => {
+    if (parsedSkills.length > 0) return parsedSkills[0];
+    if (parsedCategories.length > 0) return `${parsedCategories[0]} Specialist`;
+    const lower = providerName.toLowerCase();
+    if (lower.includes("sunita") || lower.includes("beauty")) return "Beauty & Salon Specialist";
+    if (lower.includes("marcus") || lower.includes("electric")) return "Master Electrician";
+    if (lower.includes("david") || lower.includes("plumb")) return "Journeyman Plumber";
+    return "Verified Service Specialist";
+  }, [parsedSkills, parsedCategories, providerName]);
+
+  const serviceAreaDisplay =
+    currentProfile?.serviceArea || currentUser?.locality || "Greenwood Heights & Local Society";
+  const ratingDisplay = currentProfile?.avgRating
+    ? `★ ${Number(currentProfile.avgRating).toFixed(1)} Rating`
+    : "★ 4.9 Rating";
+  const jobsCountDisplay = currentProfile?.totalReviews
+    ? `(${currentProfile.totalReviews}+ Jobs)`
+    : "(35+ Jobs)";
+
+  // Dynamic avatar selection based on provider identity
+  const avatarUrl = React.useMemo(() => {
+    const lower = (providerName + " " + parsedCategories.join(" ")).toLowerCase();
+    if (lower.includes("sunita") || lower.includes("salon") || lower.includes("beauty")) {
+      return "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80";
+    }
+    if (lower.includes("david") || lower.includes("plumb")) {
+      return "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80";
+    }
+    if (lower.includes("marcus") || lower.includes("electric")) {
+      return "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80";
+    }
+    return "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=200&q=80";
+  }, [providerName, parsedCategories]);
+
+  // Sync profile fields when user/profile loads
+  useEffect(() => {
+    if (currentUser) {
+      setProfileName(currentUser.name || "");
+      setProfilePhone(currentUser.phone || "+1 555-0201");
+      setProfileArea(currentProfile?.serviceArea || currentUser.locality || "Greenwood Heights");
+      setProfileDesignation(designation);
+
+      const lower = (currentUser.name || "").toLowerCase();
+      if (lower.includes("sunita") || lower.includes("beauty")) {
+        setProfileExp("7 Years");
+        setProfileBio(
+          "Certified cosmetologist and esthetician specializing in bridal makeover, HD party makeup, scalp therapies, and organic facial treatments."
+        );
+      } else if (lower.includes("david") || lower.includes("plumb")) {
+        setProfileExp("9 Years");
+        setProfileBio(
+          "Licensed Journeyman Plumber specializing in residential leak diagnostics, hot water systems, high-pressure line snaking, and fixture replacements."
+        );
+      } else if (lower.includes("marcus") || lower.includes("electric")) {
+        setProfileExp("10 Years");
+        setProfileBio(
+          "Licensed Master Electrician specializing in residential circuit rewiring, main distribution panels, surge suppression, and solar hookups."
+        );
+      } else {
+        setProfileBio("Certified cooperative maintenance specialist dedicated to high-quality craftsmanship.");
+      }
+    }
+  }, [currentUser, currentProfile, designation]);
+
+  // Adapt demo jobs according to logged in provider's profession
+  useEffect(() => {
+    if (!currentUser) return;
+    const lower = (currentUser.name + " " + (parsedCategories[0] || "")).toLowerCase();
+    if (lower.includes("sunita") || lower.includes("salon") || lower.includes("beauty")) {
+      setJobs([
+        {
+          id: "JOB-501",
+          customerName: "Alice Henderson",
+          customerPhone: "+1 555-0301",
+          serviceName: "Bridal Glow Facial & Spa Care",
+          category: "Women's Salon & Spa",
+          address: "Apartment 4B, Greenwood Heights",
+          locality: "Greenwood Heights",
+          city: "Greenwood Heights",
+          date: "Today",
+          timeSlot: "11:00 AM",
+          issueDescription: "Pre-event premium organic glow facial treatment and scalp therapy.",
+          uploadedPhotos: [],
+          price: 1299,
+          status: "ON_THE_WAY",
+          paymentStatus: "PENDING",
+          warranty: "100% Satisfaction Guarantee",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 09:30 AM", note: "Customer preference booking" },
+            { status: "ACCEPTED", timestamp: "Today, 09:45 AM", note: "Accepted by Sunita Sharma" },
+            { status: "ON_THE_WAY", timestamp: "Today, 10:20 AM", note: "Dispatched to client residence" },
+          ],
+        },
+        {
+          id: "JOB-502",
+          customerName: "Elena Rostova",
+          customerPhone: "+1 555-0305",
+          serviceName: "Hair Styling & Mehendi Art Session",
+          category: "Beauty",
+          address: "Villa 12, Riverside Society",
+          locality: "Riverside Society",
+          city: "Riverside Society",
+          date: "Today",
+          timeSlot: "02:30 PM",
+          issueDescription: "Full hand traditional mehendi and blowout hair styling.",
+          uploadedPhotos: [],
+          price: 899,
+          status: "ACCEPTED",
+          paymentStatus: "PENDING",
+          warranty: "CoopServe Clean Touch Guarantee",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 10:15 AM", note: "Scheduled session" },
+            { status: "ACCEPTED", timestamp: "Today, 10:30 AM", note: "Accepted by Sunita Sharma" },
+          ],
+        },
+      ]);
+      setServices([
+        { id: "srv-b1", name: "Bridal & Party Makeup", category: "Women's Salon & Spa", baseLaborRate: 999, duration: "90 min", active: true },
+        { id: "srv-b2", name: "Organic Glow Facial Treatment", category: "Women's Salon & Spa", baseLaborRate: 699, duration: "60 min", active: true },
+        { id: "srv-b3", name: "Hair Spa & Scalp Therapy", category: "Beauty", baseLaborRate: 599, duration: "45 min", active: true },
+        { id: "srv-b4", name: "Traditional Mehendi Art", category: "Beauty", baseLaborRate: 499, duration: "60 min", active: true },
+      ]);
+    } else if (lower.includes("david") || lower.includes("plumb")) {
+      setJobs([
+        {
+          id: "JOB-601",
+          customerName: "Alice Henderson",
+          customerPhone: "+1 555-0301",
+          serviceName: "Emergency Pipe Leak & Valve Repair",
+          category: "Plumber",
+          address: "Apartment 4B, Greenwood Heights",
+          locality: "Greenwood Heights",
+          city: "Greenwood Heights",
+          date: "Today",
+          timeSlot: "10:30 AM",
+          issueDescription: "High pressure kitchen pipe joint dripping heavily under the sink.",
+          uploadedPhotos: [],
+          price: 450,
+          status: "ON_THE_WAY",
+          paymentStatus: "PENDING",
+          warranty: "30-Day CoopServe Protection Guarantee",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 08:30 AM", note: "Auto-dispatched emergency" },
+            { status: "ACCEPTED", timestamp: "Today, 08:45 AM", note: "Accepted by David Chen" },
+            { status: "ON_THE_WAY", timestamp: "Today, 09:50 AM", note: "On the way with plumbing toolkit" },
+          ],
+        },
+        {
+          id: "JOB-602",
+          customerName: "Elena Rostova",
+          customerPhone: "+1 555-0305",
+          serviceName: "Bathroom Drain Snaking & De-clog",
+          category: "Plumber",
+          address: "Villa 12, Riverside Society",
+          locality: "Riverside Society",
+          city: "Riverside Society",
+          date: "Today",
+          timeSlot: "02:00 PM",
+          issueDescription: "Slow drainage in master bath shower drain.",
+          uploadedPhotos: [],
+          price: 380,
+          status: "ACCEPTED",
+          paymentStatus: "PENDING",
+          warranty: "30-Day CoopServe Protection Guarantee",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 11:00 AM", note: "Regular dispatch" },
+            { status: "ACCEPTED", timestamp: "Today, 11:15 AM", note: "Accepted by David Chen" },
+          ],
+        },
+      ]);
+      setServices([
+        { id: "srv-p1", name: "Emergency Pipe Leak Repair", category: "Plumber", baseLaborRate: 399, duration: "45 min", active: true },
+        { id: "srv-p2", name: "High-Pressure Drain Snaking", category: "Plumber", baseLaborRate: 349, duration: "45 min", active: true },
+        { id: "srv-p3", name: "Water Heater Installation", category: "Plumber", baseLaborRate: 699, duration: "60 min", active: true },
+        { id: "srv-p4", name: "Bathroom Fixture Replacement", category: "Plumber", baseLaborRate: 299, duration: "30 min", active: true },
+      ]);
+    } else if (lower.includes("marcus") || lower.includes("electric")) {
+      setJobs([
+        {
+          id: "JOB-701",
+          customerName: "Alice Henderson",
+          customerPhone: "+1 555-0301",
+          serviceName: "Main Breaker Tripping & Rewiring",
+          category: "Electrician",
+          address: "Apartment 4B, Greenwood Heights",
+          locality: "Greenwood Heights",
+          city: "Greenwood Heights",
+          date: "Today",
+          timeSlot: "10:00 AM",
+          issueDescription: "Circuit breaker trips immediately when microwave and AC are powered together.",
+          uploadedPhotos: [],
+          price: 520,
+          status: "ON_THE_WAY",
+          paymentStatus: "PENDING",
+          warranty: "60-Day Electrical Safety Warranty",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 08:15 AM", note: "Auto-assigned specialist" },
+            { status: "ACCEPTED", timestamp: "Today, 08:30 AM", note: "Accepted by Marcus Thorne" },
+            { status: "ON_THE_WAY", timestamp: "Today, 09:45 AM", note: "En route with multimeters and safety gear" },
+          ],
+        },
+        {
+          id: "JOB-702",
+          customerName: "Elena Rostova",
+          customerPhone: "+1 555-0305",
+          serviceName: "Modular Smart Switches Installation",
+          category: "Electrician",
+          address: "Villa 12, Riverside Society",
+          locality: "Riverside Society",
+          city: "Riverside Society",
+          date: "Today",
+          timeSlot: "03:30 PM",
+          issueDescription: "Install 4 WiFi smart switches in living room and balcony.",
+          uploadedPhotos: [],
+          price: 490,
+          status: "ACCEPTED",
+          paymentStatus: "PENDING",
+          warranty: "60-Day Electrical Safety Warranty",
+          history: [
+            { status: "ASSIGNED", timestamp: "Today, 10:00 AM", note: "Scheduled install" },
+            { status: "ACCEPTED", timestamp: "Today, 10:20 AM", note: "Accepted by Marcus Thorne" },
+          ],
+        },
+      ]);
+      setServices([
+        { id: "srv-e1", name: "Main Circuit Breaker & Panel Check", category: "Electrician", baseLaborRate: 449, duration: "60 min", active: true },
+        { id: "srv-e2", name: "Modular Switch & Socket Rewiring", category: "Electrician", baseLaborRate: 349, duration: "45 min", active: true },
+        { id: "srv-e3", name: "Ceiling Fan & Chandelier Hookup", category: "Electrician", baseLaborRate: 299, duration: "30 min", active: true },
+        { id: "srv-e4", name: "EV Charger & Heavy Load Connection", category: "Electrician", baseLaborRate: 899, duration: "90 min", active: true },
+      ]);
+    }
+  }, [currentUser]);
 
   // Filters for today's jobs
   const [todayFilter, setTodayFilter] = useState<"ALL" | "ACTIVE" | "COMPLETED">("ALL");
@@ -136,8 +514,16 @@ function ProviderDashboardContent() {
     setReplyText((prev) => ({ ...prev, [revId]: "" }));
   };
 
+  const pendingRequestsCount = assignedRequests.filter((r) => r.status === "ASSIGNED").length;
+
   const NAV_ITEMS = [
     { id: "overview", label: "Overview", icon: Wrench },
+    {
+      id: "requests",
+      label: "Member Requests",
+      badge: pendingRequestsCount > 0 ? `${pendingRequestsCount} new` : assignedRequests.length > 0 ? assignedRequests.length : undefined,
+      icon: ClipboardList,
+    },
     { id: "today", label: "Today's jobs", badge: todayJobs.length, icon: Calendar },
     { id: "upcoming", label: "Upcoming jobs", badge: upcomingJobs.length, icon: Clock },
     { id: "earnings", label: "Earnings", icon: DollarSign },
@@ -157,8 +543,8 @@ function ProviderDashboardContent() {
         <div className="flex items-center gap-4">
           <div className="relative">
             <img
-              src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=200&q=80"
-              alt="Rahul"
+              src={avatarUrl}
+              alt={providerName}
               className="w-16 h-16 rounded-2xl object-cover border-2 border-brand-500 shadow-md"
             />
             <span
@@ -170,17 +556,17 @@ function ProviderDashboardContent() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                {greeting}, Rahul 👋
+                {greeting}, {firstName} 👋
               </h1>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-800 border border-teal-200">
                 <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
-                Master AC Specialist
+                {designation}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
-              <span>Bengaluru Hub (Indiranagar & East)</span>
+              <span>{serviceAreaDisplay}</span>
               <span>•</span>
-              <span className="text-emerald-600 font-semibold">★ 4.9 Rating (420+ Jobs)</span>
+              <span className="text-emerald-600 font-semibold">{ratingDisplay} {jobsCountDisplay}</span>
             </p>
           </div>
         </div>
@@ -325,6 +711,201 @@ function ProviderDashboardContent() {
       {/* 1. OVERVIEW TAB */}
       {activeTab === "overview" && (
         <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Active Member Requests Section */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-800 text-xs font-bold border border-blue-200 mb-1.5">
+                  <ClipboardList className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Live Member Requests • Real-Time Database Sync</span>
+                </div>
+                <h2 className="text-lg sm:text-xl font-black text-slate-900">
+                  Assigned Member Requests ({assignedRequests.length})
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Accept incoming requests from cooperative members, update live arrival and work progress, and mark tasks resolved.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                <button
+                  onClick={fetchAssignedRequests}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold transition-all flex items-center gap-1.5"
+                  title="Refresh member requests from database"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${requestsLoading ? "animate-spin text-blue-600" : "text-slate-500"}`} />
+                  <span>Refresh</span>
+                </button>
+                <Link
+                  href="/provider/requests"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
+                >
+                  <span>All Requests</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {requestsLoading ? (
+              <div className="py-8 text-center text-xs text-slate-400">
+                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                Loading member requests from database...
+              </div>
+            ) : assignedRequests.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-2">
+                <p className="text-xs font-bold text-slate-700">No assigned requests currently pending</p>
+                <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                  When members book your trade services or central dispatch assigns a request to you, it will appear here immediately with live action controls.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {assignedRequests.map((req) => {
+                  const isLoading = requestActionLoadingId === req.id;
+                  return (
+                    <div
+                      key={req.id}
+                      className="p-5 sm:p-6 rounded-2xl border border-slate-200 bg-white hover:border-blue-300 transition-all shadow-sm space-y-4"
+                    >
+                      {/* Request Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-black text-slate-900">{req.category}</span>
+                          <StatusBadge status={req.status} size="sm" />
+                          <UrgencyBadge isEmergency={req.isEmergency} size="sm" />
+                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                            #{req.id.slice(-6)}
+                          </span>
+                        </div>
+
+                        <div className="text-xs text-slate-400 font-medium">
+                          Requested on {new Date(req.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+
+                      {/* Request Details */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div className="md:col-span-2 space-y-2">
+                          <p className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 leading-relaxed font-medium">
+                            "{req.description}"
+                          </p>
+                          <div className="flex items-center gap-2 text-slate-500">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>{req.address} ({req.locality})</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-100 space-y-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                            Member Customer
+                          </span>
+                          <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5 text-slate-400" />
+                            {req.member?.name || "Cooperative Member"}
+                          </p>
+                          {req.member?.phone && (
+                            <a
+                              href={`tel:${req.member.phone}`}
+                              className="text-blue-600 hover:underline flex items-center gap-1.5 font-medium"
+                            >
+                              <Phone className="w-3.5 h-3.5 text-slate-400" />
+                              {req.member.phone}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Completion Notes if resolved */}
+                      {req.completionNotes && (
+                        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-900">
+                          <strong className="block font-bold mb-0.5">Completion Notes:</strong>
+                          {req.completionNotes}
+                        </div>
+                      )}
+
+                      {/* Interactive Controls */}
+                      <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                        <Link
+                          href={`/provider/requests/${req.id}`}
+                          className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                        >
+                          <span>Open Request Action Workspace</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* 1. ASSIGNED: Accept or Decline */}
+                          {req.status === "ASSIGNED" && (
+                            <>
+                              <button
+                                disabled={isLoading}
+                                onClick={() => setDeclineModalRequest(req)}
+                                className="px-3.5 py-1.5 rounded-xl border border-rose-300 text-rose-700 hover:bg-rose-50 text-xs font-bold transition-all disabled:opacity-50"
+                              >
+                                Decline
+                              </button>
+                              <button
+                                disabled={isLoading}
+                                onClick={() => handleRequestRespond(req.id, "ACCEPT")}
+                                className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>{isLoading ? "Processing..." : "Accept Request"}</span>
+                              </button>
+                            </>
+                          )}
+
+                          {/* 2. ACCEPTED: Start Travel */}
+                          {req.status === "ACCEPTED" && (
+                            <button
+                              disabled={isLoading}
+                              onClick={() => handleRequestUpdateProgress(req.id, "ON_THE_WAY")}
+                              className="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                              <Car className="w-3.5 h-3.5" />
+                              <span>{isLoading ? "Updating..." : "Update Progress: On The Way"}</span>
+                            </button>
+                          )}
+
+                          {/* 3. ON_THE_WAY: Start Work */}
+                          {req.status === "ON_THE_WAY" && (
+                            <button
+                              disabled={isLoading}
+                              onClick={() => handleRequestUpdateProgress(req.id, "IN_PROGRESS")}
+                              className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                              <Hammer className="w-3.5 h-3.5" />
+                              <span>{isLoading ? "Updating..." : "Update Progress: Start Work (In Progress)"}</span>
+                            </button>
+                          )}
+
+                          {/* 4. IN_PROGRESS: Mark Resolved */}
+                          {req.status === "IN_PROGRESS" && (
+                            <button
+                              disabled={isLoading}
+                              onClick={() => setResolveModalRequest(req)}
+                              className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Mark Resolved</span>
+                            </button>
+                          )}
+
+                          {/* 5. RESOLVED */}
+                          {req.status === "RESOLVED" && (
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              Service Resolved & Completed
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           {/* Today's Schedule & Active Dispatch */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
@@ -505,7 +1086,7 @@ function ProviderDashboardContent() {
               <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 text-teal-900 flex items-center gap-3 text-xs">
                 <Award className="w-5 h-5 text-teal-600 shrink-0" />
                 <div>
-                  <p className="font-bold">Rahul qualifies for ₹3,000 monthly high-performer bonus!</p>
+                  <p className="font-bold">{firstName} qualifies for ₹3,000 monthly high-performer bonus!</p>
                   <p className="text-[11px] text-teal-700">Maintain &gt;96% completion until Sep 30.</p>
                 </div>
               </div>
@@ -543,6 +1124,199 @@ function ProviderDashboardContent() {
         </div>
       )}
 
+      {/* 1.5 MEMBER REQUESTS TAB */}
+      {activeTab === "requests" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-800 text-xs font-bold border border-blue-200 mb-1.5">
+                  <ClipboardList className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Central Dispatch • Assigned Member Calls</span>
+                </div>
+                <h2 className="text-xl font-black text-slate-900">
+                  Member Service Requests ({assignedRequests.length})
+                </h2>
+                <p className="text-xs text-slate-500">
+                  All service requests placed by cooperative members and assigned to you. Update progress in real time.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={fetchAssignedRequests}
+                  className="px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold transition-all flex items-center gap-1.5"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${requestsLoading ? "animate-spin text-blue-600" : "text-slate-500"}`} />
+                  <span>Refresh DB</span>
+                </button>
+                <Link
+                  href="/provider/requests"
+                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <span>Workspace View</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {requestsLoading ? (
+              <div className="py-12 text-center text-xs text-slate-400">
+                <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                Loading your assigned requests from cooperative database...
+              </div>
+            ) : assignedRequests.length === 0 ? (
+              <div className="py-12 text-center border border-slate-100 rounded-3xl bg-slate-50 space-y-2">
+                <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                  <ClipboardList className="w-6 h-6" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900">No member requests assigned</h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  When members book your trade or dispatch routes jobs to your area, they will appear here with one-click status controls.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {assignedRequests.map((req) => {
+                  const isLoading = requestActionLoadingId === req.id;
+                  return (
+                    <div
+                      key={req.id}
+                      className="p-5 sm:p-6 rounded-2xl border border-slate-200 bg-white hover:border-blue-300 transition-all shadow-sm space-y-4"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-black text-slate-900">{req.category}</span>
+                          <StatusBadge status={req.status} size="sm" />
+                          <UrgencyBadge isEmergency={req.isEmergency} size="sm" />
+                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                            #{req.id.slice(-6)}
+                          </span>
+                        </div>
+
+                        <div className="text-xs text-slate-400 font-medium">
+                          Booked on {new Date(req.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div className="md:col-span-2 space-y-2">
+                          <p className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 leading-relaxed font-medium">
+                            "{req.description}"
+                          </p>
+                          <div className="flex items-center gap-2 text-slate-500">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>{req.address} ({req.locality})</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-100 space-y-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                            Customer Member
+                          </span>
+                          <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5 text-slate-400" />
+                            {req.member?.name || "Cooperative Member"}
+                          </p>
+                          {req.member?.phone && (
+                            <a
+                              href={`tel:${req.member.phone}`}
+                              className="text-blue-600 hover:underline flex items-center gap-1.5 font-medium"
+                            >
+                              <Phone className="w-3.5 h-3.5 text-slate-400" />
+                              {req.member.phone}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      {req.completionNotes && (
+                        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-900">
+                          <strong className="block font-bold mb-0.5">Completion Notes:</strong>
+                          {req.completionNotes}
+                        </div>
+                      )}
+
+                      <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                        <Link
+                          href={`/provider/requests/${req.id}`}
+                          className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                        >
+                          <span>Open Request Workspace</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          {req.status === "ASSIGNED" && (
+                            <>
+                              <button
+                                disabled={isLoading}
+                                onClick={() => setDeclineModalRequest(req)}
+                                className="px-3.5 py-1.5 rounded-xl border border-rose-300 text-rose-700 hover:bg-rose-50 text-xs font-bold transition-all disabled:opacity-50"
+                              >
+                                Decline
+                              </button>
+                              <button
+                                disabled={isLoading}
+                                onClick={() => handleRequestRespond(req.id, "ACCEPT")}
+                                className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>{isLoading ? "Processing..." : "Accept Request"}</span>
+                              </button>
+                            </>
+                          )}
+
+                          {req.status === "ACCEPTED" && (
+                            <button
+                              disabled={isLoading}
+                              onClick={() => handleRequestUpdateProgress(req.id, "ON_THE_WAY")}
+                              className="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                              <Car className="w-3.5 h-3.5" />
+                              <span>{isLoading ? "Updating..." : "Update Progress: On The Way"}</span>
+                            </button>
+                          )}
+
+                          {req.status === "ON_THE_WAY" && (
+                            <button
+                              disabled={isLoading}
+                              onClick={() => handleRequestUpdateProgress(req.id, "IN_PROGRESS")}
+                              className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                              <Hammer className="w-3.5 h-3.5" />
+                              <span>{isLoading ? "Updating..." : "Update Progress: Start Work (In Progress)"}</span>
+                            </button>
+                          )}
+
+                          {req.status === "IN_PROGRESS" && (
+                            <button
+                              disabled={isLoading}
+                              onClick={() => setResolveModalRequest(req)}
+                              className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Mark Resolved</span>
+                            </button>
+                          )}
+
+                          {req.status === "RESOLVED" && (
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              Service Resolved & Completed
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 2. TODAY'S JOBS TAB */}
       {activeTab === "today" && (
         <div className="space-y-6 animate-in fade-in duration-200">
@@ -555,20 +1329,30 @@ function ProviderDashboardContent() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl self-start sm:self-center">
-                {(["ALL", "ACTIVE", "COMPLETED"] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setTodayFilter(filter)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      todayFilter === filter
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
-                  >
-                    {filter === "ALL" ? "All (4)" : filter === "ACTIVE" ? "Active (3)" : "Completed (1)"}
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+                <button
+                  onClick={() => setActiveTab("requests")}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200 transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <ClipboardList className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Live Member Requests ({assignedRequests.length})</span>
+                </button>
+
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+                  {(["ALL", "ACTIVE", "COMPLETED"] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setTodayFilter(filter)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        todayFilter === filter
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      {filter === "ALL" ? "All (4)" : filter === "ACTIVE" ? "Active (3)" : "Completed (1)"}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -991,7 +1775,7 @@ function ProviderDashboardContent() {
                     <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-xs space-y-1">
                       <span className="font-bold text-teal-900 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-teal-600" />
-                        <span>Rahul's Reply</span>
+                        <span>{firstName}'s Reply</span>
                       </span>
                       <p className="text-teal-800">{rev.providerReply}</p>
                     </div>
@@ -1237,17 +2021,19 @@ function ProviderDashboardContent() {
                 <label className="font-bold text-slate-700">Full Name</label>
                 <input
                   type="text"
-                  defaultValue="Rahul Sharma"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-900"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">Designation</label>
+                <label className="font-bold text-slate-700">Designation / Primary Trade</label>
                 <input
                   type="text"
-                  defaultValue="Master AC & Refrigeration Technician"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold"
+                  value={profileDesignation}
+                  onChange={(e) => setProfileDesignation(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-900"
                 />
               </div>
 
@@ -1255,8 +2041,9 @@ function ProviderDashboardContent() {
                 <label className="font-bold text-slate-700">Phone Number</label>
                 <input
                   type="text"
-                  defaultValue="+91 98765 01234"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold"
+                  value={profilePhone}
+                  onChange={(e) => setProfilePhone(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-900"
                 />
               </div>
 
@@ -1264,8 +2051,9 @@ function ProviderDashboardContent() {
                 <label className="font-bold text-slate-700">Years of Experience</label>
                 <input
                   type="text"
-                  defaultValue="8 Years"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold"
+                  value={profileExp}
+                  onChange={(e) => setProfileExp(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-900"
                 />
               </div>
 
@@ -1273,8 +2061,9 @@ function ProviderDashboardContent() {
                 <label className="font-bold text-slate-700">Bio & Specialty Description</label>
                 <textarea
                   rows={3}
-                  defaultValue="Specialized in inverter split systems, Daikin/LG/Voltas PCB diagnostic troubleshooting, leak testing with nitrogen gas, and high-pressure chemical foam coil washing."
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-medium"
+                  value={profileBio}
+                  onChange={(e) => setProfileBio(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-medium text-slate-900"
                 />
               </div>
             </div>
@@ -1378,6 +2167,113 @@ function ProviderDashboardContent() {
                   Trigger SOS
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mark Resolved Modal */}
+      {resolveModalRequest && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Mark Request Resolved</h3>
+                  <p className="text-xs text-slate-500">{resolveModalRequest.category} • #{resolveModalRequest.id.slice(-6)}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setResolveModalRequest(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 block">
+                Completion Notes & Resolution Summary <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                value={completionNotes}
+                onChange={(e) => setCompletionNotes(e.target.value)}
+                placeholder="Explain the work performed, replaced parts, testing done, or maintenance tips provided to customer..."
+                rows={4}
+                className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                onClick={() => setResolveModalRequest(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!completionNotes.trim() || requestActionLoadingId === resolveModalRequest.id}
+                onClick={() =>
+                  handleRequestUpdateProgress(resolveModalRequest.id, "RESOLVED", completionNotes)
+                }
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 transition-all shadow-md shadow-emerald-500/20"
+              >
+                {requestActionLoadingId === resolveModalRequest.id ? "Saving..." : "Confirm Resolution"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decline Modal */}
+      {declineModalRequest && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">Decline Assigned Request</h3>
+              <button
+                onClick={() => setDeclineModalRequest(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              Declining will return this request to the coordinator queue so another verified specialist can be dispatched.
+            </p>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 block">
+                Reason for declining (Optional)
+              </label>
+              <textarea
+                value={declineReason}
+                onChange={(e) => setDeclineReason(e.target.value)}
+                placeholder="E.g., Out of range, overlapping emergency call, required tools unavailable..."
+                rows={3}
+                className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-rose-500 outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                onClick={() => setDeclineModalRequest(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() =>
+                  handleRequestRespond(declineModalRequest.id, "DECLINE", declineReason)
+                }
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition-all"
+              >
+                Confirm Decline
+              </button>
             </div>
           </div>
         </div>

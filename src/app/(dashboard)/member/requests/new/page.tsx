@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -13,11 +13,18 @@ import {
   FileText,
   Sparkles,
   Send,
+  Wrench,
+  Star,
+  CheckCircle2,
 } from "lucide-react";
 import { CATEGORIES, LOCALITIES } from "@/lib/constants";
+import SocietyGroupPoolSection from "@/components/booking/SocietyGroupPoolSection";
+import { SocietyPoolItem } from "@/lib/societyPoolService";
 
-export default function NewRequestPage() {
+function NewRequestForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const proQuery = searchParams.get("pro") || searchParams.get("providerId") || "";
 
   const [category, setCategory] = useState<string>(CATEGORIES[0]);
   const [visibility, setVisibility] = useState<"PERSONAL" | "COMMUNITY">("PERSONAL");
@@ -26,9 +33,41 @@ export default function NewRequestPage() {
   const [locality, setLocality] = useState<string>(LOCALITIES[0]);
   const [isEmergency, setIsEmergency] = useState(false);
   const [preferredDateTime, setPreferredDateTime] = useState("");
+  const [selectedProviderId, setSelectedProviderId] = useState<string>(proQuery);
+  const [categoryProviders, setCategoryProviders] = useState<any[]>([]);
+  const [selectedSocietyPool, setSelectedSocietyPool] = useState<SocietyPoolItem | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Load verified active providers for the selected category
+  useEffect(() => {
+    let isMounted = true;
+    fetch(`/api/providers?category=${encodeURIComponent(category)}&verifiedOnly=true`)
+      .then((res) => (res.ok ? res.json() : { providers: [] }))
+      .then((data) => {
+        if (!isMounted) return;
+        const list = data.providers || [];
+        setCategoryProviders(list);
+
+        // Pre-select if query param matches
+        if (proQuery) {
+          const match = list.find(
+            (p: any) =>
+              p.id === proQuery ||
+              p.name.toLowerCase().includes(proQuery.toLowerCase())
+          );
+          if (match) {
+            setSelectedProviderId(match.id);
+          }
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [category, proQuery]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +92,10 @@ export default function NewRequestPage() {
           locality,
           isEmergency,
           preferredDateTime: preferredDateTime || null,
+          selectedProviderId: selectedProviderId || undefined,
+          societyName: selectedSocietyPool?.societyName,
+          groupCode: selectedSocietyPool?.code,
+          poolId: selectedSocietyPool?.id,
         }),
       });
 
@@ -276,6 +319,51 @@ export default function NewRequestPage() {
             </div>
           </div>
 
+          {/* Specialist Preference (Priority 1 Customer Selection or Auto-Dispatch) */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                4. Specialist Preference (Optional)
+              </label>
+              <span className="text-[11px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-blue-600" />
+                Auto-Dispatch Enabled
+              </span>
+            </div>
+
+            <select
+              value={selectedProviderId}
+              onChange={(e) => setSelectedProviderId(e.target.value)}
+              className="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+            >
+              <option value="">
+                ⚡ Auto-Dispatch: Automatically match nearest & highest-rated specialist (Recommended)
+              </option>
+              {categoryProviders.map((pro: any) => (
+                <option key={pro.id} value={pro.id}>
+                  👤 {pro.name} — ★{(pro.providerProfile?.avgRating || 5.0).toFixed(1)} ({pro.locality || "Local Specialist"})
+                </option>
+              ))}
+            </select>
+
+            <p className="text-[11px] text-slate-500">
+              {selectedProviderId
+                ? "Priority 1 Active: Your chosen specialist will be assigned if currently active and available."
+                : isEmergency
+                ? "Emergency priority: The nearest available specialist with the highest rating will be assigned immediately."
+                : "Normal priority: The highest-rated available specialist will be assigned automatically."}
+            </p>
+          </div>
+
+          {/* Optional Society/Apartment Group Pool Section */}
+          <SocietyGroupPoolSection
+            category={category}
+            locality={locality}
+            addressLine={address}
+            selectedPool={selectedSocietyPool}
+            onSelectPool={setSelectedSocietyPool}
+          />
+
           {/* Submit CTA */}
           <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
             <Link
@@ -300,5 +388,19 @@ export default function NewRequestPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function NewRequestPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[400px] flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <NewRequestForm />
+    </Suspense>
   );
 }

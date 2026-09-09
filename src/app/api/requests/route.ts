@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { ROLES, REQUEST_STATUS } from "@/lib/constants";
 import { createNotification } from "@/lib/notifications";
 import { MOCK_REQUESTS } from "@/lib/mockDb";
+import { autoAssignProvider } from "@/lib/providerAssignmentService";
+import { sendSms, SMS_TEMPLATES } from "@/lib/smsGatewayService";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +65,7 @@ export async function GET(req: Request) {
           },
         },
         rating: true,
+        pool: true,
         _count: {
           select: { coSigns: true, comments: true },
         },
@@ -123,7 +126,15 @@ export async function POST(req: Request) {
       address,
       isEmergency = false,
       preferredDateTime,
+      selectedProviderId,
+      preferredProviderId,
+      providerId,
+      societyName,
+      groupCode,
+      poolId,
     } = body;
+
+    const requestedProviderId = selectedProviderId || preferredProviderId || providerId || null;
 
     if (!category || !description || !address) {
       return NextResponse.json(
@@ -133,6 +144,25 @@ export async function POST(req: Request) {
     }
 
     const targetLocality = locality || user.locality || "Greenwood Heights";
+
+    // Optional Society Pool resolution
+    let resolvedPoolId = poolId || null;
+    let resolvedGroupCode = groupCode || null;
+    let resolvedSociety = societyName || null;
+
+    if (!resolvedPoolId && resolvedGroupCode) {
+      try {
+        const pool = await prisma.societyPool.findUnique({
+          where: { code: resolvedGroupCode.trim().toUpperCase() },
+        });
+        if (pool) {
+          resolvedPoolId = pool.id;
+          resolvedSociety = resolvedSociety || pool.societyName;
+        }
+      } catch (err) {
+        console.warn("Notice: could not resolve society pool by code:", err);
+      }
+    }
 
     const newRequest = await prisma.serviceRequest.create({
       data: {
@@ -145,6 +175,9 @@ export async function POST(req: Request) {
         isEmergency: Boolean(isEmergency),
         preferredDateTime: preferredDateTime ? new Date(preferredDateTime) : null,
         status: REQUEST_STATUS.PENDING,
+        poolId: resolvedPoolId,
+        societyName: resolvedSociety,
+        groupCode: resolvedGroupCode,
       },
     });
 
@@ -160,23 +193,81 @@ export async function POST(req: Request) {
       },
     });
 
+    // Run Automated Service Provider Assignment System
+    const assignmentResult = await autoAssignProvider(newRequest.id, requestedProviderId);
+
     // Notify coordinators/admins
     const admins = await prisma.user.findMany({
       where: { role: ROLES.ADMIN },
     });
 
     for (const admin of admins) {
+      let adminMsg = "";
+      if (assignmentResult.assigned && assignmentResult.provider) {
+        adminMsg = isEmergency
+          ? `[EMERGENCY - AUTO-ASSIGNED] ${category} at ${targetLocality} assigned to ${assignmentResult.provider.name}.`
+          : `New ${category} request at ${targetLocality} automatically assigned to ${assignmentResult.provider.name}.`;
+      } else {
+        adminMsg = isEmergency
+          ? `[EMERGENCY - UNASSIGNED] New ${category} request at ${targetLocality} requires coordinator dispatch.`
+          : `New ${category} request submitted at ${targetLocality} (Pending Dispatch).`;
+      }
+
       await createNotification({
         userId: admin.id,
         type: isEmergency ? "COMMUNITY_ALERT" : "STATUS_CHANGE",
-        message: isEmergency
-          ? `[EMERGENCY] New ${category} request at ${targetLocality}: "${description.slice(0, 50)}..."`
-          : `New ${category} request submitted at ${targetLocality}.`,
+        message: adminMsg,
         link: `/admin/requests`,
       });
     }
 
-    return NextResponse.json({ success: true, request: newRequest }, { status: 201 });
+    // Dispatch SMS notification to member/customer
+    try {
+      const memberUser = await prisma.user.findUnique({ where: { id: user.userId } });
+      if (memberUser?.phone) {
+        if (assignmentResult.assigned && assignmentResult.provider) {
+          sendSms({
+            to: memberUser.phone,
+            message: SMS_TEMPLATES.providerAssigned(
+              newRequest.id.slice(-6).toUpperCase(),
+              assignmentResult.provider.name,
+              assignmentResult.provider.phone || "+91 98765 00000"
+            ),
+            type: "PROVIDER_ASSIGNED",
+            bookingId: newRequest.id,
+          }).catch(console.error);
+        } else {
+          sendSms({
+            to: memberUser.phone,
+            message: SMS_TEMPLATES.bookingConfirmed(
+              newRequest.id.slice(-6).toUpperCase(),
+              category,
+              targetLocality
+            ),
+            type: "BOOKING_CONFIRMED",
+            bookingId: newRequest.id,
+          }).catch(console.error);
+        }
+      }
+    } catch {
+      // Non-blocking SMS dispatch
+    }
+
+    // Return the updated request record
+    const finalRequest = await prisma.serviceRequest.findUnique({
+      where: { id: newRequest.id },
+      include: {
+        assignedProvider: {
+          select: { id: true, name: true, phone: true, locality: true },
+        },
+        pool: true,
+      },
+    });
+
+    return NextResponse.json(
+      { success: true, request: finalRequest || newRequest, assignment: assignmentResult },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("POST request error:", error);
     return NextResponse.json({ error: "Failed to create service request" }, { status: 500 });

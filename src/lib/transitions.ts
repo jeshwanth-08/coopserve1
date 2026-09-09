@@ -1,4 +1,4 @@
-﻿import { REQUEST_STATUS, RequestStatus, ROLES, Role } from "./constants";
+import { REQUEST_STATUS, RequestStatus, ROLES, Role } from "./constants";
 
 export interface TransitionValidation {
   allowed: boolean;
@@ -41,11 +41,15 @@ export function validateStatusTransition(
       return { allowed: false, error: `Invalid transition from ${currentStatus} to ${requestedStatus}.` };
 
     case REQUEST_STATUS.ASSIGNED:
-      if (requestedStatus === REQUEST_STATUS.ACCEPTED) {
+      if (
+        requestedStatus === REQUEST_STATUS.ACCEPTED ||
+        requestedStatus === REQUEST_STATUS.ON_THE_WAY ||
+        requestedStatus === REQUEST_STATUS.IN_PROGRESS
+      ) {
         if (!isAssignedProvider && userRole !== ROLES.ADMIN) {
-          return { allowed: false, error: "Only the assigned provider can accept this request." };
+          return { allowed: false, error: "Only the assigned provider can accept or progress this request." };
         }
-        return { allowed: true, nextStatus: REQUEST_STATUS.ACCEPTED };
+        return { allowed: true, nextStatus: requestedStatus as RequestStatus };
       }
       if (requestedStatus === REQUEST_STATUS.DECLINED) {
         if (!isAssignedProvider && userRole !== ROLES.ADMIN) {
@@ -61,20 +65,26 @@ export function validateStatusTransition(
       return { allowed: false, error: `Invalid transition from ${currentStatus} to ${requestedStatus}.` };
 
     case REQUEST_STATUS.ACCEPTED:
-      if (requestedStatus === REQUEST_STATUS.ON_THE_WAY) {
+      if (
+        requestedStatus === REQUEST_STATUS.ON_THE_WAY ||
+        requestedStatus === REQUEST_STATUS.IN_PROGRESS
+      ) {
         if (!isAssignedProvider && userRole !== ROLES.ADMIN) {
-          return { allowed: false, error: "Only the assigned provider can update status to On The Way." };
+          return { allowed: false, error: "Only the assigned provider can update status." };
         }
-        return { allowed: true, nextStatus: REQUEST_STATUS.ON_THE_WAY };
+        return { allowed: true, nextStatus: requestedStatus as RequestStatus };
       }
       return { allowed: false, error: `Invalid transition from ${currentStatus} to ${requestedStatus}.` };
 
     case REQUEST_STATUS.ON_THE_WAY:
-      if (requestedStatus === REQUEST_STATUS.IN_PROGRESS) {
+      if (
+        requestedStatus === REQUEST_STATUS.IN_PROGRESS ||
+        requestedStatus === REQUEST_STATUS.RESOLVED
+      ) {
         if (!isAssignedProvider && userRole !== ROLES.ADMIN) {
-          return { allowed: false, error: "Only the assigned provider can mark work as In Progress." };
+          return { allowed: false, error: "Only the assigned provider can progress this request." };
         }
-        return { allowed: true, nextStatus: REQUEST_STATUS.IN_PROGRESS };
+        return { allowed: true, nextStatus: requestedStatus as RequestStatus };
       }
       return { allowed: false, error: `Invalid transition from ${currentStatus} to ${requestedStatus}.` };
 

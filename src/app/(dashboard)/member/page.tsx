@@ -12,9 +12,23 @@ import {
   MapPin,
   Calendar,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import StatCard from "@/components/StatCard";
 import StatusBadge from "@/components/StatusBadge";
 import UrgencyBadge from "@/components/UrgencyBadge";
+
+const MaintenanceDashboardWidget = dynamic(
+  () => import("@/components/maintenance/MaintenanceDashboardWidget"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm text-center">
+        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+        <p className="text-xs text-slate-400">Loading Maintenance & AMC Scheduler...</p>
+      </div>
+    ),
+  }
+);
 
 import { MOCK_REQUESTS } from "@/lib/mockDb";
 
@@ -67,6 +81,18 @@ export default async function MemberDashboard() {
   );
   const resolvedCount = requests.filter((r) => r.status === "RESOLVED").length;
   const emergencyCount = requests.filter((r) => r.isEmergency).length;
+
+  // Extract completed service history for Smart Maintenance Scheduler (serialized safely for client)
+  const completedRequests = requests
+    .filter((r) => r.status === "RESOLVED" || r.status === "CONFIRMED" || Boolean(r.resolvedAt))
+    .map((r) => ({
+      id: r.id,
+      category: r.category,
+      description: r.description,
+      status: r.status,
+      createdAt: typeof r.createdAt === "object" && r.createdAt?.toISOString ? r.createdAt.toISOString() : String(r.createdAt || ""),
+      resolvedAt: r.resolvedAt ? (typeof r.resolvedAt === "object" && r.resolvedAt?.toISOString ? r.resolvedAt.toISOString() : String(r.resolvedAt)) : null,
+    }));
 
   return (
     <div className="space-y-6">
@@ -127,6 +153,9 @@ export default async function MemberDashboard() {
           color="purple"
         />
       </div>
+
+      {/* Smart Household Maintenance AMC & Revisit Scheduler */}
+      <MaintenanceDashboardWidget completedRequests={completedRequests} />
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
