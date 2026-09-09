@@ -22,7 +22,7 @@ import Footer from "@/components/home/Footer";
 import PersonalizedHomeBanner from "@/components/home/PersonalizedHomeBanner";
 import SearchModal from "@/components/home/SearchModal";
 import QuickBookingModal from "@/components/home/QuickBookingModal";
-import { POPULAR_SERVICES, ServiceItem, CategoryDetail, findMatchingServiceForCategory } from "@/lib/homeData";
+import { POPULAR_SERVICES, ServiceItem, ProProfile, CategoryDetail, findMatchingServiceForCategory, getMatchingServiceForPro } from "@/lib/homeData";
 
 export default function HomePage() {
   const [selectedCity, setSelectedCity] = useState("Bengaluru");
@@ -33,6 +33,7 @@ export default function HomePage() {
   const [activeServiceForBooking, setActiveServiceForBooking] = useState<ServiceItem | null>(
     POPULAR_SERVICES[0]
   );
+  const [selectedProForBooking, setSelectedProForBooking] = useState<ProProfile | null>(null);
 
   useEffect(() => {
     const fetchMe = async () => {
@@ -63,10 +64,16 @@ export default function HomePage() {
     setSelectedLocality(locality);
   };
 
-  const handleOpenBookingWithService = (service?: ServiceItem) => {
-    if (service) {
+  const handleOpenBookingWithService = (service?: ServiceItem, pro?: ProProfile) => {
+    if (pro) {
+      setSelectedProForBooking(pro);
+      const matched = service || getMatchingServiceForPro(pro);
+      setActiveServiceForBooking(matched);
+    } else if (service) {
+      setSelectedProForBooking(null);
       setActiveServiceForBooking(service);
     } else {
+      setSelectedProForBooking(null);
       setActiveServiceForBooking(POPULAR_SERVICES[0]);
     }
     setIsBookingOpen(true);
@@ -150,7 +157,7 @@ export default function HomePage() {
         />
 
         {/* 9. Best-rated professionals */}
-        <BestRatedPros onOpenBooking={() => handleOpenBookingWithService()} />
+        <BestRatedPros onOpenBooking={handleOpenBookingWithService} />
 
         {/* 10. Limited-time offers */}
         <LimitedTimeOffers onOpenBooking={() => handleOpenBookingWithService()} />
@@ -192,8 +199,12 @@ export default function HomePage() {
       {/* Global Frictionless Booking Modal */}
       <QuickBookingModal
         isOpen={isBookingOpen}
-        onClose={() => setIsBookingOpen(false)}
+        onClose={() => {
+          setIsBookingOpen(false);
+          setSelectedProForBooking(null);
+        }}
         initialService={activeServiceForBooking}
+        initialPro={selectedProForBooking}
         selectedCity={selectedCity}
         selectedLocality={selectedLocality}
       />

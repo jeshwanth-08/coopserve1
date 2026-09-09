@@ -467,7 +467,7 @@ export default function CustomerAccountDashboard() {
                       </div>
 
                       <button
-                        onClick={() => router.push("/book/svc-1")}
+                        onClick={() => router.push(`/book/${pro.serviceId || "svc-1"}?pro=${pro.id}`)}
                         className="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5"
                       >
                         <span>Book with {pro.name.split(" ")[0]}</span>
