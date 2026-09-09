@@ -34,6 +34,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     "nav.welfare": "Welfare & e-Shram",
     "nav.download_app": "Download App (.APK)",
     "nav.book_service": "Book a Service",
+    "nav.support": "Support",
 
     // Hero & Tagline
     "hero.badge": "Verified Labour Cooperative Federation Network",
@@ -110,6 +111,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     "nav.welfare": "कल्याण एवं ई-श्रम",
     "nav.download_app": "ऐप डाउनलोड (.APK)",
     "nav.book_service": "सेवा बुक करें",
+    "nav.support": "सहायता",
 
     // Hero & Tagline
     "hero.badge": "सत्यापित श्रम सहकारी महासंघ नेटवर्क",
@@ -186,6 +188,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     "nav.welfare": "நலன்புரி & இ-ஷ்ரம்",
     "nav.download_app": "செயலி பதிவிறக்கம் (.APK)",
     "nav.book_service": "சேவையை முன்பதிவு செய்க",
+    "nav.support": "ஆதரவு",
 
     // Hero & Tagline
     "hero.badge": "சரிபார்க்கப்பட்ட தொழிலாளர் கூட்டுறவு கூட்டமைப்பு",
@@ -262,6 +265,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     "nav.welfare": "సంక్షేమం & ఈ-శ్రమ్",
     "nav.download_app": "యాప్ డౌన్‌లోడ్ (.APK)",
     "nav.book_service": "సేవను బుక్ చేయండి",
+    "nav.support": "సహాయం",
 
     // Hero & Tagline
     "hero.badge": "ధృవీకరించబడిన లేబర్ కోఆపరేటివ్ ఫెడరేషన్ నెట్‌వర్క్",
@@ -338,6 +342,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     "nav.welfare": "ಕಲ್ಯಾಣ & ಇ-ಶ್ರಮ್",
     "nav.download_app": "ಆ್ಯಪ್ ಡೌನ್‌ಲೋಡ್ (.APK)",
     "nav.book_service": "ಸೇವೆ ಕಾಯ್ದಿರಿಸಿ",
+    "nav.support": "ಬೆಂಬಲ",
 
     // Hero & Tagline
     "hero.badge": "ಪರಿಶೀಲಿತ ಕಾರ್ಮಿಕ ಸಹಕಾರಿ ಮಹಾಮಂಡಳ ನೆಟ್‌ವರ್ಕ್",
