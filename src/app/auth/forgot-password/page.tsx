@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
 
             <div className="pt-2 text-center">
               <Link
-                href="/auth/login"
+                href="/login"
                 className="text-xs font-bold text-brand-600 hover:underline inline-flex items-center gap-1"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />

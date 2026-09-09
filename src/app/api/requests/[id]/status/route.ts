@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { REQUEST_STATUS, ROLES } from "@/lib/constants";
@@ -48,11 +48,17 @@ export async function POST(
       );
     }
 
+    const finalStatus = validation.nextStatus || nextStatus;
+
     const updateData: any = {
-      status: nextStatus,
+      status: finalStatus,
     };
 
-    if (nextStatus === REQUEST_STATUS.RESOLVED) {
+    if (validation.resetProvider) {
+      updateData.assignedProviderId = null;
+    }
+
+    if (finalStatus === REQUEST_STATUS.RESOLVED) {
       updateData.resolvedAt = new Date();
       if (completionNotes) updateData.completionNotes = completionNotes;
       if (completionPhotos) {
@@ -69,9 +75,15 @@ export async function POST(
     await prisma.statusHistory.create({
       data: {
         requestId: id,
-        status: nextStatus,
+        status: finalStatus,
         changedById: user.userId,
-        note: note || (nextStatus === REQUEST_STATUS.RESOLVED ? completionNotes : `Status updated to ${nextStatus}`),
+        note:
+          note ||
+          (finalStatus === REQUEST_STATUS.RESOLVED
+            ? completionNotes
+            : validation.resetProvider
+            ? "Declined by provider: Resetting to queue"
+            : `Status updated to ${finalStatus}`),
       },
     });
 
@@ -79,7 +91,9 @@ export async function POST(
     await createNotification({
       userId: request.memberId,
       type: "STATUS_CHANGE",
-      message: `Your ${request.category} request status is now: ${nextStatus}.`,
+      message: validation.resetProvider
+        ? `Your ${request.category} request has returned to the cooperative queue for reassignment.`
+        : `Your ${request.category} request status has been updated to ${finalStatus}.`,
       link: `/member/requests/${id}`,
     });
 

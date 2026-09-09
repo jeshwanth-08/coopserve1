@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { ROLES } from "@/lib/constants";
@@ -51,13 +51,24 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const { skills, serviceCategories, serviceArea, certifications } = body;
 
-    const updatedProfile = await prisma.providerProfile.update({
+    const updatedProfile = await prisma.providerProfile.upsert({
       where: { userId: user.userId },
-      data: {
+      update: {
         skills: JSON.stringify(skills || []),
         serviceCategories: JSON.stringify(serviceCategories || []),
         serviceArea: serviceArea || "",
         ...(certifications ? { certifications: JSON.stringify(certifications) } : {}),
+      },
+      create: {
+        userId: user.userId,
+        skills: JSON.stringify(skills || ["General Maintenance"]),
+        serviceCategories: JSON.stringify(serviceCategories || ["General"]),
+        serviceArea: serviceArea || "All Localities",
+        certifications: JSON.stringify(certifications || []),
+        isVerified: false,
+        isActive: true,
+        avgRating: 5.0,
+        totalReviews: 0,
       },
     });
 

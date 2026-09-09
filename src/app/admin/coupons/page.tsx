@@ -1,11 +1,5 @@
-﻿"use client";
-import React, { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
 
 export default function AdminCouponsRedirect() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace("/admin?tab=coupons");
-  }, [router]);
-  return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading Coupons...</div>;
+  redirect("/admin?tab=coupons");
 }
