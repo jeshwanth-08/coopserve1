@@ -66,11 +66,12 @@ export default function LanguageSwitcher({ variant = "navbar" }: LanguageSwitche
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-brand-600 shadow-xs transition-all hover:border-slate-300"
+        className="h-9 px-2.5 flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-brand-600 shadow-xs transition-all hover:border-slate-300 font-bold text-xs"
         title={`Change Language / भाषा बदलें (${currentOption.nativeName})`}
         aria-label="Change Language"
       >
-        <Globe className="w-4 h-4 text-brand-600" />
+        <Globe className="w-3.5 h-3.5 text-brand-600 shrink-0" />
+        <span className="font-bold text-xs tracking-tight text-slate-700">ENG</span>
       </button>
 
       {isOpen && (
