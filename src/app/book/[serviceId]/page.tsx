@@ -29,7 +29,9 @@ import {
   QrCode,
   FileCheck2,
   X,
+  Compass,
 } from "lucide-react";
+import ServiceLocationMap from "@/components/maps/ServiceLocationMap";
 import Navbar from "@/components/home/Navbar";
 import Footer from "@/components/home/Footer";
 import {
@@ -99,6 +101,7 @@ function BookingPageContent() {
   const [customerName, setCustomerName] = useState("Aarav Mehta");
   const [customerPhone, setCustomerPhone] = useState("+91 98765 43210");
   const [selectedSocietyPool, setSelectedSocietyPool] = useState<SocietyPoolItem | null>(null);
+  const [showMapCanvas, setShowMapCanvas] = useState(false);
 
   // Additional Details & Media State
   const [issueNotes, setIssueNotes] = useState(
@@ -712,6 +715,37 @@ function BookingPageContent() {
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* OpenStreetMap + Leaflet GIS Live Canvas */}
+                <div className="pt-1">
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setShowMapCanvas(!showMapCanvas)}
+                      className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-all shadow-sm"
+                    >
+                      <Compass className="w-4 h-4 text-emerald-600" />
+                      <span>{showMapCanvas ? "Close OpenStreetMap Canvas" : "Pin Address on OpenStreetMap (Leaflet Canvas)"}</span>
+                    </button>
+                    {showMapCanvas && (
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        GIS Reverse Geocode Active
+                      </span>
+                    )}
+                  </div>
+
+                  {showMapCanvas && (
+                    <div className="mt-3 animate-in fade-in duration-200">
+                      <ServiceLocationMap
+                        initialLocality={locality || "Greenwood Heights"}
+                        onLocationSelect={(loc) => {
+                          if (loc.address) setAddressLine(loc.address);
+                          if (loc.locality) setLocality(loc.locality);
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Optional Society/Apartment Group Pool Section */}

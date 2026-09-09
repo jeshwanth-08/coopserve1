@@ -5,6 +5,7 @@ import { ROLES, REQUEST_STATUS } from "@/lib/constants";
 import { createNotification } from "@/lib/notifications";
 import { MOCK_REQUESTS } from "@/lib/mockDb";
 import { autoAssignProvider } from "@/lib/providerAssignmentService";
+import { sendSms, SMS_TEMPLATES } from "@/lib/smsGatewayService";
 
 export const dynamic = "force-dynamic";
 
@@ -218,6 +219,38 @@ export async function POST(req: Request) {
         message: adminMsg,
         link: `/admin/requests`,
       });
+    }
+
+    // Dispatch SMS notification to member/customer
+    try {
+      const memberUser = await prisma.user.findUnique({ where: { id: user.userId } });
+      if (memberUser?.phone) {
+        if (assignmentResult.assigned && assignmentResult.provider) {
+          sendSms({
+            to: memberUser.phone,
+            message: SMS_TEMPLATES.providerAssigned(
+              newRequest.id.slice(-6).toUpperCase(),
+              assignmentResult.provider.name,
+              assignmentResult.provider.phone || "+91 98765 00000"
+            ),
+            type: "PROVIDER_ASSIGNED",
+            bookingId: newRequest.id,
+          }).catch(console.error);
+        } else {
+          sendSms({
+            to: memberUser.phone,
+            message: SMS_TEMPLATES.bookingConfirmed(
+              newRequest.id.slice(-6).toUpperCase(),
+              category,
+              targetLocality
+            ),
+            type: "BOOKING_CONFIRMED",
+            bookingId: newRequest.id,
+          }).catch(console.error);
+        }
+      }
+    } catch {
+      // Non-blocking SMS dispatch
     }
 
     // Return the updated request record
