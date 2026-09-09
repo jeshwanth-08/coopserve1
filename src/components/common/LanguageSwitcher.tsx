@@ -66,12 +66,11 @@ export default function LanguageSwitcher({ variant = "navbar" }: LanguageSwitche
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-2xs transition-all hover:border-slate-300"
-        title="Change Language"
+        className="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-brand-600 shadow-xs transition-all hover:border-slate-300"
+        title={`Change Language / भाषा बदलें (${currentOption.nativeName})`}
+        aria-label="Change Language"
       >
-        <Globe className="w-3.5 h-3.5 text-brand-600" />
-        <span className="font-semibold">{currentOption.nativeName}</span>
-        <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`} />
+        <Globe className="w-4 h-4 text-brand-600" />
       </button>
 
       {isOpen && (
