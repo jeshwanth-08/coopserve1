@@ -1,4 +1,4 @@
-﻿export interface MockUser {
+export interface MockUser {
   id: string;
   name: string;
   email: string;
@@ -46,6 +46,25 @@ export const MOCK_USERS: Record<string, MockUser> = {
       skills: ["Master Electrician", "Rewiring", "Circuit Breakers", "Solar Panel Hookups"],
       categories: ["Electrician", "Appliance Repair"],
       serviceArea: "Greenwood Heights & East",
+    },
+  },
+  "rahul.ac@coop.org": {
+    id: "user-provider-rahul",
+    name: "Rahul Sharma",
+    email: "rahul.ac@coop.org",
+    role: "PROVIDER",
+    locality: "Koramangala",
+    phone: "+91 98450 11223",
+    address: "7th Block, Koramangala",
+    password: "password123",
+    providerProfile: {
+      isVerified: true,
+      isActive: true,
+      avgRating: 4.9,
+      totalReviews: 28,
+      skills: ["AC Deep Jet Cleaning", "Gas Charging", "Compressor Diagnostics", "Inverter AC Servicing"],
+      categories: ["AC Technician", "Appliance Repair"],
+      serviceArea: "Koramangala & HSR",
     },
   },
   "provider2@coop.org": {

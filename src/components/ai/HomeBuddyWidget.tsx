@@ -312,7 +312,7 @@ export default function HomeBuddyWidget() {
                       : "bg-white text-slate-800 border border-slate-200/90 rounded-tl-none font-normal"
                   }`}
                 >
-                  <p className="leading-relaxed">{m.text}</p>
+                  <div className="leading-relaxed whitespace-pre-line space-y-1">{m.text}</div>
 
                   {/* Diagnostic Points Checklist */}
                   {m.diagnosticPoints && m.diagnosticPoints.length > 0 && (
@@ -412,10 +412,12 @@ export default function HomeBuddyWidget() {
           <div className="p-2 bg-white border-t border-slate-100 overflow-x-auto flex gap-1.5 text-[11px] no-scrollbar">
             {[
               "Poor working washing machine",
-              "AC cooling not working",
+              "How to save on electricity bill",
               "Water leaking under sink",
+              "How to book a service?",
+              "How to remove hard water stains",
               "Main power MCB keeps tripping",
-              "What is CoopServe Plus?",
+              "What is HOME+ membership?",
             ].map((qp, idx) => (
               <button
                 key={idx}

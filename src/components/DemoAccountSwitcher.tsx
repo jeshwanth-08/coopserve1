@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -18,7 +18,7 @@ export const DEMO_ACCOUNTS = [
     role: "PROVIDER",
     label: "Professional AC Specialist",
     name: "Rahul",
-    email: "provider1@coop.org",
+    email: "rahul.ac@coop.org",
     detail: "Master AC Technician (★ 4.9)",
     icon: Wrench,
     color: "text-teal-600 bg-teal-50 hover:bg-teal-100",
@@ -120,7 +120,7 @@ export default function DemoAccountSwitcher() {
                 const IconComponent = acc.icon;
                 return (
                   <button
-                    key={acc.email}
+                    key={`${acc.email}-${acc.name}`}
                     onClick={() => handleSwitch(acc.email)}
                     className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-slate-50 flex items-start gap-3 transition-colors group"
                   >

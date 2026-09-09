@@ -36,7 +36,7 @@ export async function POST(req: Request) {
           return NextResponse.json(geminiResult);
         }
       } catch (err) {
-        console.warn("Gemini API call error, falling back to smart diagnostic engine:", err);
+        console.warn("Gemini API call failed, trying backup model / engine:", err);
       }
     }
 
@@ -48,18 +48,18 @@ export async function POST(req: Request) {
           return NextResponse.json(openAiResult);
         }
       } catch (err) {
-        console.warn("OpenAI API call error, falling back to smart diagnostic engine:", err);
+        console.warn("OpenAI API call error, falling back to smart engine:", err);
       }
     }
 
-    // 3. Fallback to Built-in High-Accuracy Smart Diagnostic Engine
-    const smartDiagnostic = runSmartDiagnosticEngine(message);
-    return NextResponse.json(smartDiagnostic);
+    // 3. Built-in High-Accuracy Conversational Knowledge Engine
+    const smartResponse = runSmartDiagnosticEngine(message);
+    return NextResponse.json(smartResponse);
   } catch (error: any) {
     console.error("AI Chat route error:", error);
     return NextResponse.json(
       {
-        text: "I am ready to help! Please tell me which home issue you need solved (e.g., washing machine, plumbing, electrical, or AC).",
+        text: "I am ready to help! You can ask me any question about home maintenance, troubleshooting repairs, DIY tips, or CoopServe services.",
         action: {
           label: "View All 20 Services",
           url: "/services",
@@ -70,59 +70,490 @@ export async function POST(req: Request) {
   }
 }
 
-// Built-in Smart Semantic Diagnostic Engine
-function runSmartDiagnosticEngine(query: string) {
-  const q = query.toLowerCase();
+// Live Google Gemini Integration (Gemini 2.0 / 1.5 Flash)
+async function callGemini(message: string, apiKey: string) {
+  const serviceCatalogSummary = ALL_20_SERVICES.map(
+    (s) => `${s.id}: ${s.name} (${s.category}) - ₹${s.price}`
+  ).join(", ");
 
-  // Helper to test regex with word boundaries
+  const prosSummary = TOP_PROFESSIONALS.map(
+    (p) => `${p.name} (${p.role})`
+  ).join(", ");
+
+  const systemInstruction = `You are "Home Buddy", an exceptionally intelligent, friendly, and helpful AI assistant for CoopServe (a neighborhood cooperative home services platform), powered by modern LLM intelligence like Gemini and GPT.
+
+CAPABILITIES:
+- You can answer ANY question the user asks — home maintenance, appliances, electrical, plumbing, carpentry, DIY repairs, cleaning, pest control, safety, energy saving, platform questions, general knowledge, science, tips, or friendly conversation.
+- Answer thoroughly, clearly, and conversationally with well-structured formatting, bullet points, and actionable tips.
+
+MATCHING RULES:
+1. If the user's inquiry relates to an issue that can be serviced by CoopServe:
+   - Accurately diagnose the probable causes.
+   - Recommend the exact relevant service from CoopServe catalog and appropriate specialist.
+   - CRITICAL RULE: Washing machines, refrigerators, microwaves, dishwashers are "Appliance Repair" (svc-6), NEVER AC Technician (svc-5)!
+   - Only classify as AC Technician (svc-5) when specifically about Air Conditioners (cooling, coils, gas refill).
+2. If the user asks general knowledge, conversational greetings, DIY advice, or non-service questions:
+   - Answer intelligently, warmly, and comprehensively without forcing an irrelevant booking!
+
+OUTPUT STRUCTURE (STRICT JSON ONLY):
+{
+  "text": "Your complete, articulate, smart answer (can be multiple paragraphs with formatting)",
+  "diagnosticPoints": ["Key takeaway / diagnosis 1", "Key takeaway 2"],
+  "safetyTip": "Important precaution or safety tip if applicable",
+  "recommendedService": {
+    "id": "exact svc id e.g. svc-6",
+    "name": "service name",
+    "price": 349,
+    "duration": "45 mins",
+    "url": "/book/svc-6"
+  },
+  "recommendedPro": {
+    "name": "Marcus Thorne",
+    "role": "Master Specialist"
+  },
+  "action": {
+    "label": "Button label e.g. Book Specialist (₹349)",
+    "url": "/book/svc-6"
+  }
+}
+
+Catalog: ${serviceCatalogSummary}
+Top Specialists: ${prosSummary}`;
+
+  // Try Gemini 1.5 Flash (most widely accessible) then 2.0 Flash
+  const models = ["gemini-1.5-flash", "gemini-2.0-flash"];
+
+  for (const model of models) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: `${systemInstruction}\n\nUser Question: "${message}"` }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 800,
+            },
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (rawText) {
+          const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            try {
+              return JSON.parse(jsonMatch[0]);
+            } catch {
+              // fallback below
+            }
+          }
+          return {
+            text: rawText.replace(/```json/g, "").replace(/```/g, "").trim(),
+          };
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+// Live OpenAI Integration (GPT-4o-mini)
+async function callOpenAI(message: string, apiKey: string) {
+  const serviceCatalogSummary = ALL_20_SERVICES.map(
+    (s) => `${s.id}: ${s.name} (${s.category}) - ₹${s.price}`
+  ).join(", ");
+
+  const systemPrompt = `You are "Home Buddy", the elite AI concierge for CoopServe.
+Answer ANY query intelligently, thoroughly, and helpfully like ChatGPT.
+Washing machines are "Appliance Repair" (svc-6), NOT AC.
+Output strict JSON with fields: text, diagnosticPoints (array, optional), safetyTip (optional), recommendedService (id, name, price, duration, url, optional), action (label, url, optional).
+Catalog: ${serviceCatalogSummary}`;
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: message },
+      ],
+      temperature: 0.3,
+    }),
+  });
+
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) return null;
+
+  try {
+    return JSON.parse(content);
+  } catch {
+    return { text: content };
+  }
+}
+
+// Built-in Comprehensive Multi-Domain Conversational Knowledge Engine
+function runSmartDiagnosticEngine(query: string) {
+  const q = query.toLowerCase().trim();
   const matches = (pattern: RegExp) => pattern.test(q);
 
-  // 1. Washing Machine / Laundry (Priority Check before generic appliance or AC)
+  // 1. Greetings, Identity & General Chit-Chat
+  if (matches(/^(hi|hello|hey|greetings|good\s*(morning|afternoon|evening)|namaste)\b/)) {
+    return {
+      text: "Hello! 👋 I'm Home Buddy, your 24/7 AI home maintenance and diagnostic assistant.\n\nYou can ask me anything — from diagnosing a noisy washing machine, AC cooling issues, or electrical trips, to DIY cleaning tips, home improvements, and booking certified cooperative professionals!",
+      diagnosticPoints: [
+        "Ask about any home repair: 'washing machine not spinning', 'leaking faucet', 'MCB tripping'.",
+        "Ask DIY questions: 'how to remove hard water stains', 'how to lower my AC power bill'.",
+        "Ask about CoopServe: 'how to book', 'what are the prices', 'HOME+ membership'.",
+      ],
+      action: {
+        label: "Explore All 20 Services",
+        url: "/services",
+      },
+    };
+  }
+
+  if (matches(/\b(who\s*are\s*you|what\s*is\s*your\s*name|what\s*can\s*you\s*do|about\s*you|introduce\s*yourself)\b/)) {
+    return {
+      text: "I am Home Buddy ⚡, CoopServe's resident AI concierge!\n\nI combine diagnostic engineering knowledge across all 20 home trades with real-time dispatch matching. I can troubleshoot household breakdowns, provide instant DIY maintenance advice, compute cost estimates, and connect you directly with verified neighborhood technicians.",
+      diagnosticPoints: [
+        "Trained across electrical, plumbing, HVAC, carpentry, cleaning, appliances, and painting.",
+        "Equipped with live Google Gemini & OpenAI API support for open-ended queries.",
+        "Direct integration with CoopServe's transparent 100% fixed-rate pricing.",
+      ],
+      action: {
+        label: "Browse Services Catalog",
+        url: "/services",
+      },
+    };
+  }
+
+  // 2. CoopServe Platform Knowledge: How to Book, Pricing, Policies, Membership
+  if (matches(/\b(how\s*to\s*book|how\s*does\s*(it|coopserve)\s*work|booking\s*process|how\s*do\s*i\s*schedule)\b/)) {
+    return {
+      text: "Booking on CoopServe is seamless and transparent:\n\n1. **Select Service**: Pick from our 20 verified trade categories or click an AI-recommended match.\n2. **Choose Date & Time**: Pick your convenient slot (same-day emergency dispatch available in under 60 mins).\n3. **Verified Dispatch**: A background-checked neighborhood cooperative professional arrives at your doorstep with standard rate cards — no hidden surcharges.",
+      diagnosticPoints: [
+        "100% Fixed Rates: Transparent pricing starting from ₹149.",
+        "Doorstep Warranty: 30-day rework guarantee on all completed services.",
+        "Verified Crew: Police verified, skill-certified cooperative technicians.",
+      ],
+      action: {
+        label: "Book a Service Now",
+        url: "/services",
+      },
+    };
+  }
+
+  if (matches(/\b(price|pricing|rates|cost|how\s*much|charges|fee|catalog)\b/)) {
+    return {
+      text: "CoopServe operates on fair-trade, transparent pricing with zero middleman markups:\n\n• **Electrician**: From ₹149 (inspection, switchboard, wiring)\n• **Plumber**: From ₹149 (tap leaks, blockages, fittings)\n• **Appliance Repair**: ₹349 (Washing machine, Refrigerator, Microwave, RO)\n• **AC Servicing**: ₹499 (Deep Power Jet cleaning & coil wash)\n• **Cleaning & Pest Control**: From ₹399–₹599\n• **Carpentry & Painting**: From ₹199–₹499",
+      diagnosticPoints: [
+        "All prices are standardized across neighborhood societies.",
+        "HOME+ members receive an additional 10% discount on every job.",
+      ],
+      action: {
+        label: "View Full Price Catalog",
+        url: "/services",
+      },
+    };
+  }
+
+  if (matches(/\b(membership|home\+|plus\s*member|subscription|discounts|perks)\b/)) {
+    return {
+      text: "The **HOME+ Membership** (₹999/year) unlocks premium neighborhood cooperative privileges:\n\n• **10% Flat Discount** on all 20 home services all year round.\n• **Priority Emergency Dispatch**: Technicians reach your home in under 30 minutes.\n• **4 Free Doorstep Inspections** every year for routine electrical, AC, and plumbing checks.\n• **60-Day Extended Warranty** on all repair jobs.",
+      action: {
+        label: "Explore HOME+ Membership",
+        url: "/membership",
+      },
+    };
+  }
+
+  if (matches(/\b(cancel|cancellation|refund|reschedule|money\s*back|warranty)\b/)) {
+    return {
+      text: "CoopServe guarantees hassle-free customer protection:\n\n• **Free Cancellation**: You can cancel or reschedule any booking anytime up to 2 hours before the scheduled slot with zero penalty.\n• **Instant Refund**: Prepaid amounts are credited back immediately.\n• **30-Day Cooperative Warranty**: If an issue recurs within 30 days of service, our technician returns and rectifies it free of charge.",
+      action: {
+        label: "Help & Support Center",
+        url: "/support",
+      },
+    };
+  }
+
+  // 3. DIY, Energy Saving & Home Hacks
+  if (matches(/\b(clean\s*(ceiling\s*)?fan|fan\s*clean|dust\s*(on\s*)?fan)\b/)) {
+    return {
+      text: "The Mess-Free Pillowcase Fan Cleaning Hack:\n\n1. **Use an Old Pillowcase**: Slip an old pillowcase over a single fan blade like a sleeve.\n2. **Slide & Trap**: Press your hands against both the top and bottom of the blade and slide the pillowcase backward towards you. 100% of the dust and grime stays trapped inside the pillowcase instead of falling onto your bed or floor!\n3. **Repeat for all blades**, then wipe each blade with a microfiber cloth dampened with mild soapy water or vinegar spray.\n4. **Shake out the pillowcase** outside or wash it directly in the washing machine.",
+      diagnosticPoints: [
+        "Never use dripping wet cloths near the motor housing to prevent electrical shorts.",
+        "Check if blade angle is bent — unbalanced blades cause wobbling and humming motor strain.",
+      ],
+      action: {
+        label: "Book Full Home Deep Cleaning (₹399)",
+        url: "/book/svc-7",
+      },
+    };
+  }
+
+  if (matches(/\b(save\s*electricity|lower\s*(power|electric|ac)\s*bill|energy\s*saving|power\s*consumption|reduce\s*bill)\b/)) {
+    return {
+      text: "Top Proven Tips to Cut Your Home Power Bills by 20–35%:\n\n1. **AC Ideal Temperature**: Keep your AC at 24°C–26°C. Every 1°C increase saves 6% electricity.\n2. **Clean AC Filters Bi-Weekly**: Choked filters force the compressor to run 30% longer to cool the room.\n3. **Refrigerator Placement**: Keep at least 3 inches of clearance behind the fridge for coil ventilation so the compressor cycles off properly.\n4. **Check Phantom Loads**: Switch off TV, microwave, and gaming consoles at the wall socket when not in use.\n5. **Upgrade to BLDC Ceiling Fans**: BLDC fans consume just 28–35W compared to 75–80W for standard induction fans.",
+      diagnosticPoints: [
+        "A Power Jet AC service restores heat transfer efficiency, cutting power consumption by 15-20%.",
+        "Consider an electrical audit to identify overloaded circuits or neutral wire leakage.",
+      ],
+      action: {
+        label: "Book AC Power Jet Service (₹499)",
+        url: "/book/svc-5",
+      },
+    };
+  }
+
+  if (matches(/\b(hard\s*water|white\s*stains|lime\s*scale|scale\s*on\s*tap|stains\s*on\s*tiles)\b/)) {
+    return {
+      text: "How to Remove Hard Water & Limescale Stains:\n\n1. **Taps & Faucets**: Soak a paper towel or cloth in warm white vinegar, wrap it around the scaled faucet for 30 minutes, then scrub with a soft brush and rinse with water.\n2. **Bathroom Tile Grout**: Make a paste of 3 parts baking soda to 1 part hydrogen peroxide or vinegar. Apply to grout lines, leave for 15 minutes, scrub with a grout brush.\n3. **Glass Shower Partitions**: Use diluted citric acid or commercial descaler, wipe with a squeegee to prevent fresh mineral deposits.",
+      diagnosticPoints: [
+        "Hard water also scales internal geyser heating coils and washing machine drums.",
+        "For stubborn encrustations, our deep cleaning crew uses specialized anti-calc chemicals that don't damage chrome.",
+      ],
+      action: {
+        label: "Book Bathroom Deep Cleaning (₹399)",
+        url: "/book/svc-7",
+      },
+    };
+  }
+
+  if (matches(/\b(unclog\s*(a\s*)?(drain|sink|basin|toilet)|clogged\s*drain|drain\s*blocked)\b/) && !matches(/\b(plumber)\b/)) {
+    return {
+      text: "DIY Natural Method to Unclog Drains (Without Harsh Acids):\n\n1. **Baking Soda & Vinegar Volcano**: Pour 1/2 cup of baking soda directly down the drain.\n2. **Add Vinegar**: Pour 1 cup of white vinegar or warm apple cider vinegar. Cover the drain with a plug/cloth and let it fizz for 15–20 minutes.\n3. **Boiling Water Flush**: Pour a full kettle of boiling water down the drain to flush out melted grease and loose debris.\n4. **P-Trap Check**: For bathroom sinks, remove hair clumps from the pop-up stopper using a plastic drain snake or wire hanger.",
+      diagnosticPoints: [
+        "Avoid heavy commercial sulfuric acid drain cleaners as they corrode PVC pipes and heat-deform joints.",
+        "If multiple drains bubble or back up simultaneously, the blockage is in the main sewer stack.",
+      ],
+      recommendedService: {
+        id: "svc-2",
+        name: "Plumber",
+        price: 149,
+        duration: "30–45 mins",
+        url: "/book/svc-2",
+      },
+      action: {
+        label: "Book Plumber for Deep Snake Clean (₹149)",
+        url: "/book/svc-2",
+      },
+    };
+  }
+
+  if (matches(/\b(mold|mildew|fungus|black\s*spots\s*on\s*wall|damp\s*wall|seepage)\b/)) {
+    return {
+      text: "Diagnosed Issue: Mold & Moisture Seepage.\n\n• **Immediate Surface Clean**: Spray with 3% hydrogen peroxide or white vinegar (avoid mixing chemicals!). Leave for 10 minutes, scrub and wipe dry.\n• **Root Cause Check**: Mold always stems from concealed water leakage, bathroom splash seepage, or high indoor humidity (>60%).",
+      diagnosticPoints: [
+        "Check adjacent bathroom walls for hidden plumbing pipe joint leaks.",
+        "Ensure exhaust fans run for at least 15 minutes after hot showers.",
+        "Long-term remedy requires elastomeric waterproofing primer before repainting.",
+      ],
+      recommendedService: {
+        id: "svc-14",
+        name: "Roofing & Waterproofing",
+        price: 599,
+        duration: "60 mins",
+        url: "/book/svc-14",
+      },
+      action: {
+        label: "Book Waterproofing & Seepage Audit (₹599)",
+        url: "/book/svc-14",
+      },
+      safetyTip: "Wear a mask and gloves when cleaning mold spores to avoid respiratory irritation.",
+    };
+  }
+
+  if (matches(/\b(door\s*stuck|swollen\s*door|monsoon\s*door|squeaky\s*hinge|creaking\s*door)\b/)) {
+    return {
+      text: "Diagnosed Issue: Wooden Door Friction or Hinge Wear.\n\n• **Swollen Wood in Monsoon**: Wood absorbs atmospheric moisture and expands against the door frame. Rub candle wax or paraffin on sticking edges for temporary relief, or lightly plane the edge.\n• **Squeaky Hinges**: Apply silicone spray lubricant or WD-40 onto the hinge pins. Move the door back and forth several times to penetrate.",
+      diagnosticPoints: [
+        "If door sags, the top hinge screws are likely loose or stripped inside the wooden frame.",
+        "Planing more than 3mm without resealing allows more moisture in — our carpenters apply sealant edge polish.",
+      ],
+      recommendedService: {
+        id: "svc-3",
+        name: "Carpenter (Hinge & Door Fitting)",
+        price: 199,
+        duration: "30–45 mins",
+        url: "/book/svc-3",
+      },
+      action: {
+        label: "Book Carpenter (₹199)",
+        url: "/book/svc-3",
+      },
+    };
+  }
+
+  // 4. "How It Works" & Educational Principles (Prevent false diagnosis)
+  if (matches(/\b(how\s*(does|do)\s*(a|an|the)?\s*refrigerator\s*work|explain\s*(how\s*)?(a\s*)?refrigerator|refrigeration\s*cycle)\b/)) {
+    return {
+      text: "How a Refrigerator Works (The 4-Stage Vapor-Compression Cycle):\n\n1. **Compressor**: Pumps low-pressure cold refrigerant gas and compresses it into high-pressure, hot gas.\n2. **Condenser Coils (Behind/Under Fridge)**: The hot gas passes through exterior coils, shedding heat to the room and condensing into a warm liquid.\n3. **Expansion Valve / Capillary Tube**: Restricts the liquid flow, causing an abrupt drop in pressure. This makes the refrigerant flash into an ultra-cold liquid/vapor mixture.\n4. **Evaporator Coils (Inside Freezer)**: The cold refrigerant absorbs heat from food and air inside the fridge. As it absorbs heat, it evaporates back into gas and returns to the compressor.",
+      diagnosticPoints: [
+        "Refrigerators don't 'create cold' — they absorb heat from inside and pump it outside.",
+        "Keeping condenser coils clean of dust ensures maximum heat dissipation and lowest electricity consumption.",
+      ],
+      action: {
+        label: "View Appliance Services",
+        url: "/services",
+      },
+    };
+  }
+
+  if (matches(/\b(how\s*(does|do)\s*(a|an|the)?\s*(ac|air\s*conditioner)\s*work|explain\s*(how\s*)?(an?\s*)?(ac|air\s*conditioner))\b/)) {
+    return {
+      text: "How an Air Conditioner (Split AC) Works:\n\n1. **Indoor Unit (Evaporator)**: Warm room air is pulled over cold copper coils filled with chilled liquid refrigerant. The refrigerant absorbs room heat and dehumidifies the air as water condenses on the coils and drains outside.\n2. **Refrigerant Lines**: Insulated copper tubes carry the heat-laden vapor refrigerant from indoors to the outdoor unit.\n3. **Outdoor Unit (Compressor & Condenser)**: The compressor ramps up pressure and temperature, then the outdoor fan blows outside air across condenser fins to reject the absorbed heat into the atmosphere.\n4. **Expansion Valve**: Chills the refrigerant back down before cycling it back to the indoor unit.",
+      diagnosticPoints: [
+        "Inverter ACs vary compressor speed smoothly instead of switching on/off, using up to 40% less energy.",
+        "A Power Jet coil wash every 6 months restores heat exchange efficiency and prevents musty odors.",
+      ],
+      action: {
+        label: "Book Power Jet AC Clean (₹499)",
+        url: "/book/svc-5",
+      },
+    };
+  }
+
+  if (matches(/\b(how\s*(does|do)\s*(a|an|the)?\s*washing\s*machine\s*work|explain\s*(how\s*)?(a\s*)?washing\s*machine)\b/)) {
+    return {
+      text: "How a Modern Washing Machine Works:\n\n1. **Fill & Water Level Detection**: Water inlet solenoid valves open. An electronic pressure sensor detects drum air pressure to stop water fill at the exact required level.\n2. **Agitation / Tumble**: Top-loaders use an impeller or agitator to rotate water back and forth. Front-loaders use paddles to lift clothes and drop them into soapy water using gravitational tumbling (gentler on fabric and uses 50% less water).\n3. **Drainage**: A high-speed electric impeller drain pump evacuates wastewater through the discharge hose.\n4. **Centrifugal Spin Extraction**: The drum spins at 800–1400 RPM. Centrifugal force pushes clothes against the perforated drum wall, forcing water out through tiny holes.",
+      diagnosticPoints: [
+        "Front-load machines clean via gravitational friction; top-loaders clean via hydraulic agitation.",
+        "Monthly drum descaling dissolves calcium and detergent scum, preserving bearing life.",
+      ],
+      action: {
+        label: "Appliance Care & Repair (₹349)",
+        url: "/book/svc-6",
+      },
+    };
+  }
+
+  if (matches(/\b(how\s*(does|do)\s*(a|an|the)?\s*(inverter|ups)\s*work|explain\s*(how\s*)?(an?\s*)?(inverter|ups))\b/)) {
+    return {
+      text: "How a Home Inverter / UPS Works:\n\n1. **Normal Mains Mode**: When grid electricity is on, the inverter passes AC power straight to your home appliances while simultaneously converting AC to DC (Rectification) to charge the backup battery.\n2. **Transfer Switch**: When grid power fails, a high-speed relay or microcontroller detects the outage within 10–20 milliseconds (under 5ms for UPS) and switches to battery backup.\n3. **Inversion Stage**: Using MOSFETs or IGBTs with Pulse Width Modulation (PWM), it converts 12V/24V DC battery power into 220V/230V alternating current (AC).\n4. **Pure Sine Wave Filtering**: Quality inverters produce a smooth sine wave identical to grid power, ensuring fans don't hum and electronics run cool.",
+      diagnosticPoints: [
+        "Tubular lead-acid batteries require periodic distilled water top-ups; LiFePO4 batteries are maintenance-free.",
+        "Always size your inverter VA rating at 25% above your peak connected home load.",
+      ],
+      action: {
+        label: "Book Electrician (₹149)",
+        url: "/book/svc-1",
+      },
+    };
+  }
+
+  if (matches(/\b(how\s*(does|do)\s*(a|an|the)?\s*microwave\s*work|explain\s*(how\s*)?(a\s*)?microwave)\b/)) {
+    return {
+      text: "How a Microwave Oven Heats Food:\n\n1. **The Magnetron**: A specialized vacuum tube converts high-voltage electrical energy into microwave radiation at 2.45 GHz (2,450,000,000 cycles per second).\n2. **Dielectric Heating**: Water, sugar, and fat molecules in food are electric dipoles (they have positive and negative ends). As the 2.45 GHz waves alternate, these molecules rotate back and forth billions of times per second.\n3. **Molecular Friction**: This violent oscillation creates molecular friction that turns directly into heat throughout the food, cooking from the inside and outside simultaneously.",
+      diagnosticPoints: [
+        "Microwaves do not make food radioactive; they are non-ionizing electromagnetic radiation.",
+        "Metal reflects microwaves and can cause high-voltage electric arcing that ruins the magnetron.",
+      ],
+    };
+  }
+
+  // 5. Everyday Science & General Household Curiosities
+  if (matches(/\b(water\s*expand(s|ing)?\s*(when\s*)?(it\s*)?freeze(s|ing|d)?|why\s*does\s*ice\s*float)\b/)) {
+    return {
+      text: "Why Water Expands When It Freezes (Anomalous Expansion):\n\n• **Hydrogen Bonding Lattice**: In liquid water, molecules tumble and pack tightly together. But as temperature drops below 4°C, hydrogen bonds force molecules to align into a rigid, open hexagonal crystal lattice.\n• **Extra Space**: This geometric structure holds the molecules further apart than in liquid state, causing ice to expand by approximately **9% in volume**!\n• **Lower Density**: Because the same mass now occupies greater volume, ice is less dense than liquid water, allowing it to float on lakes and oceans (which preserves aquatic life under frozen surfaces!).",
+      diagnosticPoints: [
+        "This 9% expansion is why closed water pipes burst during freezing winter spells.",
+        "Always leave headspace when freezing liquids in bottles or containers to prevent shattering.",
+      ],
+    };
+  }
+
+  if (matches(/\b(why\s*do\s*clothes\s*shrink|shrink\s*in\s*wash|shrink\s*in\s*dryer)\b/)) {
+    return {
+      text: "Why Clothes Shrink in the Wash or Dryer:\n\n• **Tension Release**: During manufacturing, natural fibers (cotton, wool, linen) are pulled, stretched, and knitted under high mechanical tension.\n• **Heat & Water Relaxation**: Hot water and dryer heat relax the hydrogen bonds holding the stretched polymer chains. The fibers release this tension and recoil back to their natural, unstressed, shorter state.\n• **Agitation Felting**: In wool, microscopic scales on each fiber interlock tighter when agitated in hot water, causing irreversible felting shrinkage.",
+      diagnosticPoints: [
+        "Wash cotton in cold water and air-dry or tumble on low heat to prevent fiber shrinkage.",
+        "Un-shrink tip: Soak the garment in lukewarm water with hair conditioner for 30 minutes, then gently stretch back into shape on a flat towel.",
+      ],
+    };
+  }
+
+  if (matches(/\b(why\s*do\s*onions\s*make\s*you\s*cry|onion\s*tears|cut\s*onion)\b/)) {
+    return {
+      text: "Why Onions Make You Cry (And How to Stop It):\n\n• **The Chemical Reaction**: Slicing an onion ruptures microscopic cells, mixing the enzyme *alliinase* with sulfur-containing amino acid sulfoxides. This generates volatile **syn-propanethial-S-oxide** gas.\n• **Nerve Stimulation**: The gas reaches your eyes and reacts with the tear film to form mild sulfuric acid, stimulating lachrymal glands to flush out the irritant with tears.\n\n**Hacks to Prevent Tears**:\n1. Chill the onion in the fridge for 15 minutes before cutting (cold slows enzyme activity).\n2. Use a razor-sharp knife (crushes fewer cells than a dull blade).\n3. Cut under an active exhaust fan or turn on your kitchen chimney.",
+    };
+  }
+
+  if (matches(/\b(thank\s*you|thanks|thx|appreciate|good\s*job|awesome|great\s*job)\b/)) {
+    return {
+      text: "You are very welcome! 😊 I'm always here 24/7 whenever you need home repair diagnostics, DIY maintenance advice, or verified cooperative service bookings. Have a wonderful day!",
+      action: {
+        label: "Explore Services",
+        url: "/services",
+      },
+    };
+  }
+
+  // 6. Washing Machine / Laundry (Strict priority over AC)
   if (
     matches(/\b(washing\s*machine|washer|laundry|dryer|spin\s*cycle|drain\s*pump|drum\s*bearing|agitator|front\s*load|top\s*load)\b/) ||
-    (q.includes("washing") && (q.includes("machine") || q.includes("poor") || q.includes("spin") || q.includes("water") || q.includes("drum")))
+    (q.includes("washing") && (q.includes("machine") || q.includes("poor") || q.includes("spin") || q.includes("water") || q.includes("drum") || q.includes("vibrat")))
   ) {
     return {
-      text: "Diagnosed issue: Washing Machine Malfunction. Common culprits include a worn drive belt, motor capacitor failure, unlevel drum suspension, or a clogged lint/drain pump filter.",
+      text: "Diagnosed Issue: Washing Machine Breakdown / Malfunction.\n\nCommon causes based on symptoms:\n• **Drum Not Spinning / Loud Thumping**: Worn drive belt, faulty motor capacitor, or broken suspension dampers.\n• **Water Not Draining (OE / E20 Error)**: Blocked coin/lint trap filter at bottom front of machine, or burned drain pump motor.\n• **Clothes Coming Out Dirty / Smelly**: Heavy detergent residue buildup and limescale on outer drum requiring deep descaling wash.",
       diagnosticPoints: [
-        "Drum not spinning / vibrating: Often worn drive belt or shock absorber issue.",
-        "Water not draining: Usually lint/coins trapped in the lower drain pump filter.",
-        "Noisy spin cycle: Worn tub bearing or uncalibrated leveling feet.",
+        "Check and clean the bottom drain filter before calling a tech (often coins or hairpins are trapped).",
+        "Ensure all 4 feet are solidly planted on the floor to prevent violent spin vibrations.",
       ],
       recommendedService: {
         id: "svc-6",
         name: "Appliance Repair (Washing Machine)",
         price: 349,
         duration: "45 mins",
-        url: "/book/svc-6?prefilled=true&notes=Washing+Machine+inspection",
+        url: "/book/svc-6?prefilled=true&notes=Washing+Machine+diagnosis",
       },
       recommendedPro: {
         name: "Marcus Thorne",
-        role: "Certified Master Appliance & Electrical Specialist",
+        role: "Certified Master Appliance Specialist",
       },
       action: {
         label: "Book Washing Machine Specialist (₹349)",
         url: "/book/svc-6",
       },
-      safetyTip: "Unplug the machine from the main wall socket if there is excess water leakage or burning smell.",
+      safetyTip: "Always switch off and unplug from main socket if there is water leakage near the motor.",
     };
   }
 
-  // 2. Refrigerator / Fridge / Freezer
+  // 5. Refrigerator / Fridge / Freezer
   if (matches(/\b(refrigerator|fridge|freezer|ice\s*maker|compressor\s*buzz|cooling\s*coil)\b/)) {
     return {
-      text: "Diagnosed issue: Refrigerator / Cooling Malfunction. Potential causes include dust on the condenser coils, faulty starter relay, or defrost timer malfunction.",
+      text: "Diagnosed Issue: Refrigerator Cooling Failure / Thermal Imbalance.\n\nKey diagnostic checkpoints:\n• **Freezer Cold, But Fridge Section Warm**: Defrost timer or bimetal thermostat failure causing ice to block the air passage damper.\n• **Compressor Clicking Every Few Minutes**: Defective PTC starter relay or capacitor preventing the motor from turning over.\n• **Water Leaking Under Veg Tray**: Clogged defrost drain tube dripping condensation inside.",
       diagnosticPoints: [
-        "Fridge not cooling: Dirty coils behind the unit or starter relay failure.",
-        "Water pooling at bottom: Blocked defrost drain channel.",
-        "Excess ice buildup: Worn magnetic door gasket allowing warm air in.",
+        "Inspect magnetic door gasket with a currency note test (if note slides out easily, gasket has lost seal).",
+        "Vacuum dust from condenser coils behind/under the fridge to lower compressor temperature.",
       ],
       recommendedService: {
         id: "svc-6",
         name: "Appliance Repair (Refrigerator)",
         price: 349,
         duration: "45 mins",
-        url: "/book/svc-6?prefilled=true&notes=Refrigerator+cooling+fix",
+        url: "/book/svc-6",
       },
       recommendedPro: {
         name: "Marcus Thorne",
@@ -135,10 +566,14 @@ function runSmartDiagnosticEngine(query: string) {
     };
   }
 
-  // 3. Microwave / RO Water Purifier / Dishwasher / Kitchen Appliances
-  if (matches(/\b(microwave|oven|ro\s*purifier|water\s*purifier|ro\s*filter|dishwasher|mixer|grinder|chimney)\b/)) {
+  // 6. Microwave / RO / Kitchen Appliances
+  if (matches(/\b(microwave|oven|ro\s*purifier|water\s*purifier|ro\s*filter|tds|dishwasher|chimney|hob|mixer|grinder)\b/)) {
     return {
-      text: "Diagnosed issue: Kitchen Appliance Maintenance. Our technicians carry diagnostic multimeters, replacement heating elements, and genuine RO membrane filters.",
+      text: "Diagnosed Issue: Kitchen Appliance Malfunction.\n\n• **Microwave Not Heating**: High-voltage diode or magnetron failure.\n• **RO Water Flow Very Slow**: Choked sediment filter or exhausted RO membrane (TDS levels should be tested).\n• **Kitchen Chimney Poor Suction**: Baffle filters saturated with cooking grease requiring ultrasonic degreasing.",
+      diagnosticPoints: [
+        "RO filters must be serviced every 6–9 months to maintain pure drinking water quality.",
+        "Never run a microwave empty or use metal containers to avoid high-voltage arcing.",
+      ],
       recommendedService: {
         id: "svc-6",
         name: "Appliance Repair",
@@ -153,17 +588,16 @@ function runSmartDiagnosticEngine(query: string) {
     };
   }
 
-  // 4. Air Conditioning (AC) - MUST USE WORD BOUNDARIES \bac\b to avoid matching "machine"
+  // 7. Air Conditioning (AC) - Exact word boundary check
   if (
     matches(/\b(ac|air\s*conditioner|split\s*ac|window\s*ac|hvac|power\s*jet|cooling|compressor|freon|gas\s*refill)\b/) &&
     !matches(/\b(washing|washer|laundry)\b/)
   ) {
     return {
-      text: "Diagnosed issue: AC Cooling & Airflow Reduction. The most frequent issues are choked indoor cooling fins, choked blower fan, or refrigerant pressure drop.",
+      text: "Diagnosed Issue: AC Cooling & Airflow Reduction.\n\nPrimary diagnostic factors:\n• **Blowing Room-Temp Air**: Choked condenser fins or low refrigerant gas pressure (R32 / R410A).\n• **Water Dripping Inside Room**: Choked condensate drain pipe or unlevel indoor unit mounting.\n• **Foul Smelly Air**: Microbial biofilm on the wet evaporator coil requiring deep power jet chemical wash.",
       diagnosticPoints: [
-        "Blowing room temperature air: Low refrigerant gas or choked filter mesh.",
-        "Water dripping inside room: Blocked condensate drain tray.",
-        "Foul odor upon startup: Bacterial biofilm on evaporator fins requiring power jet wash.",
+        "Power Jet Wash flushes deep coil fins with high-pressure water jacket, restoring 100% cooling power.",
+        "Gas leak checks use nitrogen pressure testing to locate and braze copper micro-cracks before refilling.",
       ],
       recommendedService: {
         id: "svc-5",
@@ -180,51 +614,18 @@ function runSmartDiagnosticEngine(query: string) {
         label: "Book Power Jet AC Clean (₹499)",
         url: "/book/svc-5",
       },
+      safetyTip: "Turn off AC at the MCB if you hear unusual compressor grinding sounds.",
     };
   }
 
-  // 5. Plumbing & Water Leakage
-  if (matches(/\b(plumb|leak|tap|pipe|sink|drain|faucet|basin|flush|commode|clog|geyser\s*pipe|water\s*tank|seepage)\b/)) {
-    const isUrgent = matches(/\b(burst|flood|overflow|heavy\s*leak|emergency)\b/);
+  // 8. Electrical, MCB, Wiring, Switches
+  if (matches(/\b(electrician|mcb|short\s*circuit|tripping|spark|switch|socket|wiring|fuse|voltage|power\s*cut|inverter)\b/)) {
+    const isUrgent = matches(/\b(spark|smoke|burning|shock|fire)\b/);
     return {
-      text: isUrgent
-        ? "⚠️ URGENT PLUMBING ALERT: Active water leakage can damage structural walls and electrical conduits. Emergency dispatch is available in your locality."
-        : "Diagnosed issue: Plumbing & Fixture Maintenance. Our hydro-engineers arrive with non-corrosive Teflon seals, heavy-duty drain augers, and replacement brass bibcocks.",
+      text: `Diagnosed Issue: ${isUrgent ? "CRITICAL Electrical Hazard / Short Circuit" : "Electrical Circuit or Component Fault"}.\n\n• **MCB Tripping Frequently**: Circuit overload from high-wattage appliances, ground fault, or worn breaker spring mechanism.\n• **Buzzing / Warm Switch**: Loose screw terminal inside the switchboard generating resistive heat.\n• **Mild Shock from Taps / Appliances**: Missing or compromised house earthing / grounding connection.`,
       diagnosticPoints: [
-        "Dripping faucet: Worn ceramic cartridge or rubber O-ring seal.",
-        "Slow sink drain: Hair and grease sediment trap in the P-trap.",
-        "Running flush tank: Worn siphon flapper valve.",
-      ],
-      recommendedService: {
-        id: "svc-2",
-        name: "Plumber",
-        price: 199,
-        duration: "30–45 mins",
-        url: "/book/svc-2",
-      },
-      recommendedPro: {
-        name: "David Chen",
-        role: "Senior Hydro-Engineer & Master Plumber",
-      },
-      isEmergency: isUrgent,
-      safetyTip: isUrgent ? "Locate your home's main brass water stopcock valve (usually near bathroom shaft or utility) and turn clockwise to shut off water." : undefined,
-      action: {
-        label: "Book Master Plumber (₹199)",
-        url: "/book/svc-2",
-      },
-    };
-  }
-
-  // 6. Electrical, Wiring, & Power Issues
-  if (matches(/\b(electric|spark|short\s*circuit|mcb|switch|switchboard|wiring|shock|fuse|power\s*cut|socket|fan|light)\b/)) {
-    const isUrgent = matches(/\b(spark|smoke|shock|burning|fire)\b/);
-    return {
-      text: isUrgent
-        ? "⚠️ ELECTRICAL HAZARD DETECTED: Sparking or burning smell indicates high-resistance arcing or insulation breakdown."
-        : "Diagnosed issue: Electrical Circuit / Switchgear Fault. Our certified electricians inspect with digital insulation multimeters and replace faulty MCBs with Schneider/Havells genuine units.",
-      diagnosticPoints: [
-        "MCB tripping repeatedly: Overloaded circuit branch or insulation breakdown in appliance.",
-        "Flickering lights / loose switch: Arcing screw terminals inside backbox.",
+        "Do not repeatedly force a tripped MCB on without locating the shorting appliance.",
+        "Check house earthing with an earth-leakage clamp tester to prevent hazardous shocks.",
       ],
       recommendedService: {
         id: "svc-1",
@@ -234,345 +635,132 @@ function runSmartDiagnosticEngine(query: string) {
         url: "/book/svc-1",
       },
       recommendedPro: {
-        name: "Rajesh Kumar",
-        role: "Master Electrician & Smart Home Specialist",
+        name: "Marcus Thorne",
+        role: "State Licensed Master Electrician",
       },
-      isEmergency: isUrgent,
-      safetyTip: isUrgent ? "Flip DOWN the main MCB on your distribution board immediately. Do NOT touch switches with wet hands." : undefined,
       action: {
         label: "Book Certified Electrician (₹149)",
         url: "/book/svc-1",
       },
+      safetyTip: isUrgent
+        ? "DANGER: Immediately shut off the MAIN switch on your distribution panel! Do not touch with wet hands."
+        : "Turn off the individual room breaker before inspecting loose wall sockets.",
+      isEmergency: isUrgent,
     };
   }
 
-  // 7. Carpentry & Furniture
-  if (matches(/\b(carpent|door|hinge|wardrobe|bed|table|chair|wood|lock|cabinet|drawer|shelf)\b/)) {
+  // 9. Plumbing, Taps, Leakages, Drains, Flush
+  if (matches(/\b(plumber|leak|pipe|tap|faucet|drain|toilet|flush|sink|basin|clog|water\s*pressure|tank)\b/)) {
     return {
-      text: "Diagnosed issue: Woodwork & Hardware Realignment. Door sag, loose hinge screws, or stuck telescopic drawer channels can be rectified quickly with precision chisel and alignment tools.",
+      text: "Diagnosed Issue: Plumbing / Water Supply System Problem.\n\n• **Dripping Tap**: Worn ceramic disc cartridge, rubber O-ring seal, or lime buildup on valve seat.\n• **Low Water Pressure**: Air lock in pipeline, mineral scaling in aerator nozzles, or overhead tank outlet valve choked.\n• **Clogged Basin / Kitchen Drain**: Solidified cooking oil and food particles forming soap-scum blockage inside the P-trap.",
+      diagnosticPoints: [
+        "Clean tap aerators with a small brush to instantly restore minor low-pressure issues.",
+        "For hidden wall seepage, our plumbers use acoustic leak detection equipment.",
+      ],
+      recommendedService: {
+        id: "svc-2",
+        name: "Plumber",
+        price: 149,
+        duration: "30–45 mins",
+        url: "/book/svc-2",
+      },
+      recommendedPro: {
+        name: "David Chen",
+        role: "Licensed Master Plumber",
+      },
+      action: {
+        label: "Book Expert Plumber (₹149)",
+        url: "/book/svc-2",
+      },
+    };
+  }
+
+  // 10. Carpentry, Furniture, Locks
+  if (matches(/\b(carpenter|wood|furniture|shelf|cabinet|hinge|drawer|table|bed|lock|wardrobe|drilling)\b/)) {
+    return {
+      text: "Diagnosed Issue: Carpentry & Architectural Woodwork.\n\nOur carpenters handle precision joinery, hardware fittings, modular kitchen adjustments, and heavy wall installations:\n• Squeaky or misaligned soft-close cabinet hinges.\n• Heavy TV wall mounting and floating shelf anchoring with stud finding.\n• Jammed sliding wardrobe tracks and cylinder door lock replacements.",
       recommendedService: {
         id: "svc-3",
         name: "Carpenter",
-        price: 249,
-        duration: "45–60 mins",
+        price: 199,
+        duration: "30–45 mins",
         url: "/book/svc-3",
       },
       action: {
-        label: "Book Skilled Carpenter (₹249)",
+        label: "Book Certified Carpenter (₹199)",
         url: "/book/svc-3",
       },
     };
   }
 
-  // 8. Painting & Wall Care
-  if (matches(/\b(paint|painter|wall|seepage|damp|putty|primer|whitewash|texture)\b/)) {
+  // 11. Painting & Wall Finishing
+  if (matches(/\b(paint|painter|whitewash|wall\s*putty|distemper|primer|efflorescence|peeling\s*paint)\b/)) {
     return {
-      text: "Diagnosed issue: Wall Care & Surface Treatment. We provide Asian Paints waterproof acrylic putty, moisture detection scan, and roller-finish touchups with dust sheeting.",
+      text: "Diagnosed Issue: Interior / Exterior Painting & Wall Finish.\n\n• **Peeling / Flaking Paint**: Caused by moisture trapped beneath the primer or painting over powdery efflorescence without an alkaline-resistant sealer.\n• **Color Touch-ups & Room Refresh**: Machine roller finishing with low-VOC, anti-fungal emulsion paints.",
       recommendedService: {
         id: "svc-4",
         name: "Painter",
-        price: 599,
-        duration: "2–3 hrs",
+        price: 499,
+        duration: "Flexible",
         url: "/book/svc-4",
       },
       action: {
-        label: "Book Professional Painter (₹599)",
+        label: "Book House Painter (₹499)",
         url: "/book/svc-4",
       },
     };
   }
 
-  // 9. Deep Home Cleaning & Sofa Sanitization
-  if (matches(/\b(clean|deep\s*clean|bathroom\s*scrub|sofa\s*shampoo|floor\s*buff|kitchen\s*degrease|house\s*clean)\b/)) {
+  // 12. Deep Cleaning & Hygiene
+  if (matches(/\b(clean|cleaning|deep\s*clean|maid|mop|sanitize|sofa\s*wash|bathroom\s*clean|kitchen\s*clean)\b/)) {
     return {
-      text: "Diagnosed issue: Deep Cleaning & Sanitization. Single-disc rotary floor buffing, Taski chemical tile descaling, and high-suction HEPA vacuum extraction.",
+      text: "Diagnosed Issue: Residential Deep Cleaning & Sanitization.\n\nOur specialized deep cleaning crews use hospital-grade non-toxic disinfectants, steam sanitizers, and heavy scrubbing machines for:\n• **Bathroom**: Limescale and grout tile restoration, sanitization of sanitaryware.\n• **Kitchen**: Heavy grease degreasing on tiles, exhaust, cabinets, and countertops.\n• **Sofa / Mattress**: Injection-extraction deep vacuum extraction removing dust mites.",
       recommendedService: {
         id: "svc-7",
-        name: "House Cleaning",
-        price: 1499,
-        duration: "3–4 hrs",
+        name: "Full Home Deep Cleaning",
+        price: 399,
+        duration: "60–90 mins",
         url: "/book/svc-7",
       },
       action: {
-        label: "Book Full Home Deep Clean (₹1499)",
+        label: "Book Deep Cleaning Crew (₹399)",
         url: "/book/svc-7",
       },
     };
   }
 
-  // 10. Cooking & Chefs
-  if (matches(/\b(cook|chef|food|meal|breakfast|dinner|lunch|recipe)\b/)) {
+  // 13. Pest Control
+  if (matches(/\b(pest|termite|cockroach|bug|bed\s*bug|ant|rodent|rat|mosquito|insect)\b/)) {
     return {
-      text: "Looking for an experienced home chef? Our verified cooks specialize in regional home-style meals with strict hairnet and countertop hygiene.",
+      text: "Diagnosed Issue: Pest Infestation & Structural Protection.\n\n• **Cockroach Infestation**: Advanced odorless Fipronil gel baiting in kitchen hinges and drainage crevices.\n• **Termite Attack**: Chemical drill-and-inject barrier treatment protecting wood furniture and foundations.\n• **Bed Bugs**: Two-stage targeted residual misting and heat steaming.",
+      diagnosticPoints: [
+        "100% odorless, government-approved herbal and synthetic pyrethroid chemicals safe for children and pets.",
+        "Includes a 90-day retreatment warranty.",
+      ],
       recommendedService: {
         id: "svc-8",
-        name: "Cook",
-        price: 349,
-        duration: "60–75 mins",
-        url: "/book/svc-8",
-      },
-      action: {
-        label: "Book Trained Cook (₹349)",
-        url: "/book/svc-8",
-      },
-    };
-  }
-
-  // 11. Gardening & Lawn
-  if (matches(/\b(garden|plant|lawn|prun|grass|soil|pot|fertilizer|weed)\b/)) {
-    return {
-      text: "Diagnosed issue: Lawn & Potted Plant Care. Professional soil aeration, organic vermicompost feeding, hedge trimming, and neem oil pest treatment.",
-      recommendedService: {
-        id: "svc-9",
-        name: "Gardener",
-        price: 299,
+        name: "Pest Control",
+        price: 599,
         duration: "45 mins",
-        url: "/book/svc-9",
+        url: "/book/svc-8",
       },
       action: {
-        label: "Book Home Gardener (₹299)",
-        url: "/book/svc-9",
+        label: "Book Pest Control (₹599)",
+        url: "/book/svc-8",
       },
     };
   }
 
-  // 12. Tutor & Education
-  if (matches(/\b(tutor|tuition|study|math|maths|science|physics|english|exam|homework)\b/)) {
-    return {
-      text: "Need personalized 1-on-1 home tutoring? Our verified educators cover school curriculum, concept clarity, and weekly parent progress tracking.",
-      recommendedService: {
-        id: "svc-10",
-        name: "Tutor",
-        price: 399,
-        duration: "60 mins",
-        url: "/book/svc-10",
-      },
-      action: {
-        label: "Book 1-on-1 Home Tutor (₹399)",
-        url: "/book/svc-10",
-      },
-    };
-  }
-
-  // 13. Computer & Laptop Repair
-  if (matches(/\b(computer|laptop|pc|ssd|macbook|windows|slow|blue\s*screen|virus|ram)\b/)) {
-    return {
-      text: "Diagnosed issue: PC / Laptop Performance & Hardware. Doorstep diagnostic test, thermal paste cooling refresh, SSD speed upgrade, and zero data loss guarantee.",
-      recommendedService: {
-        id: "svc-11",
-        name: "Computer Repair",
-        price: 449,
-        duration: "45–60 mins",
-        url: "/book/svc-11",
-      },
-      action: {
-        label: "Book PC Diagnostic (₹449)",
-        url: "/book/svc-11",
-      },
-    };
-  }
-
-  // 14. Mobile Repair
-  if (matches(/\b(mobile|phone|iphone|screen\s*crack|battery|charging\s*port|display)\b/)) {
-    return {
-      text: "Diagnosed issue: Smartphone Screen / Battery Fix. High-grade digitizer testing, water-resistant seal adhesive, and on-the-spot screen replacement.",
-      recommendedService: {
-        id: "svc-12",
-        name: "Mobile Repair",
-        price: 399,
-        duration: "30–45 mins",
-        url: "/book/svc-12",
-      },
-      action: {
-        label: "Book Doorstep Mobile Fix (₹399)",
-        url: "/book/svc-12",
-      },
-    };
-  }
-
-  // 15. Salon & Beauty
-  if (matches(/\b(beauty|salon|facial|manicure|pedicure|makeup|hair|esthetician|wax|bridal)\b/)) {
-    return {
-      text: "Pamper yourself with salon-grade hygiene in the comfort of home. 100% single-use monodose sealed beauty kits with certified estheticians.",
-      recommendedService: {
-        id: "svc-19",
-        name: "Beauty Services",
-        price: 499,
-        duration: "60 mins",
-        url: "/book/svc-19",
-      },
-      recommendedPro: {
-        name: "Sunita Sharma",
-        role: "Senior Esthetician & Bridal Grooming Lead",
-      },
-      action: {
-        label: "Book Salon Specialist (₹499)",
-        url: "/book/svc-19",
-      },
-    };
-  }
-
-  // 16. Packers & Movers
-  if (matches(/\b(move|shifting|packers|relocation|tempo|truck|tata\s*ace)\b/)) {
-    return {
-      text: "Planning a home move? Our team provides 3-layer corrugated bubble wrap for fragile goods, closed weatherproof mini-trucks, and dedicated helpers.",
-      recommendedService: {
-        id: "svc-16",
-        name: "Packers & Movers",
-        price: 1499,
-        duration: "4–6 hrs",
-        url: "/book/svc-16",
-      },
-      action: {
-        label: "Book Relocation & Mini Truck (₹1499)",
-        url: "/book/svc-16",
-      },
-    };
-  }
-
-  // 17. Membership & Plus Plans
-  if (matches(/\b(member|membership|plus|discount|vip|saving|plan)\b/)) {
-    return {
-      text: "CoopServe Plus (₹999/yr) gives you 10% flat discount on all services, unlimited ₹0 inspection visit charges, priority 30-min emergency booking dispatch, and dedicated supervisor support.",
-      action: {
-        label: "Explore CoopServe Plus Plans",
-        url: "/membership",
-      },
-    };
-  }
-
-  // 18. Packages
-  if (matches(/\b(package|bundle|combo|refresh|summer|monsoon|move-in)\b/)) {
-    return {
-      text: "Save up to 40% with our curated bundles! From the Move-In Sanitization Pack to Summer Double AC Shield, packages include comprehensive multi-trade checklists.",
-      action: {
-        label: "Browse Curated Packages",
-        url: "/packages",
-      },
-    };
-  }
-
-  // Default intelligent assistant response
+  // 14. Intelligent Conversational Fallback for ANY other query
   return {
-    text: `I'm Home Buddy, your AI home concierge. I can diagnose any issues across our 20 cooperative services—including appliances (washing machines, refrigerators), AC cooling, plumbing, electrical, and cleaning. Could you tell me more about what's occurring?`,
+    text: `That is an interesting question! While I specialize in home maintenance, electrical systems, plumbing, and appliances for CoopServe, here is helpful insight on "${query}":\n\n1. **Practical Assessment**: For most home and technical challenges, always verify the source of the symptom (power supply, physical obstruction, or wear and tear) before attempting disassembly.\n2. **Preventive Care**: Routine seasonal inspection prevents small issues from escalating into costly breakdowns.\n3. **Live AI Assistance**: For unrestricted, creative conversation on any general topic (science, coding, recipes, writing), click the **Gear icon ⚙️** at the top right of this chat and enter your Google Gemini API key!`,
+    diagnosticPoints: [
+      "Our cooperative crew covers 20 certified trades with transparent standardized rates.",
+      "Need immediate hands-on help? Describe any symptom like 'noisy fan' or 'dripping tap'.",
+    ],
     action: {
-      label: "Browse Full Service Catalog",
+      label: "Browse All 20 Services",
       url: "/services",
     },
   };
-}
-
-// Live Google Gemini Integration
-async function callGemini(message: string, apiKey: string) {
-  const serviceCatalogSummary = ALL_20_SERVICES.map(
-    (s) => `${s.id}: ${s.name} (${s.category}) - ₹${s.price} [slug: ${s.slug}]`
-  ).join("\n");
-
-  const prosSummary = TOP_PROFESSIONALS.map(
-    (p) => `${p.name} (${p.role}) - matches serviceId: ${p.serviceId}`
-  ).join("\n");
-
-  const systemInstruction = `You are "Home Buddy", the elite AI home maintenance concierge for CoopServe.
-Your goal is to accurately diagnose the user's household issue and recommend the exact service from the CoopServe catalog.
-CRITICAL RULES:
-1. If the user mentions a washing machine, washer, refrigerator, microwave, or other household appliances, NEVER classify it as AC Technician! Washing machines and refrigerators are "Appliance Repair" (svc-6).
-2. Only classify as AC Technician (svc-5) when the issue is specifically about Air Conditioners (split/window AC cooling, coil wash, gas refill).
-3. Always provide a clear, helpful, 2-3 sentence diagnosis explaining what might be causing the symptom.
-4. Output STRICT JSON only without markdown fences:
-{
-  "text": "Your helpful diagnostic explanation",
-  "diagnosticPoints": ["Point 1", "Point 2"],
-  "recommendedService": {
-    "id": "exact svc id from catalog",
-    "name": "service name",
-    "price": 349,
-    "duration": "45 mins",
-    "url": "/book/svc-id"
-  },
-  "recommendedPro": {
-    "name": "pro name",
-    "role": "pro title"
-  },
-  "action": {
-    "label": "Button label e.g. Book Washing Machine Specialist (₹349)",
-    "url": "/book/svc-id"
-  },
-  "safetyTip": "Optional safety tip if hazardous"
-}
-
-Available Services:
-${serviceCatalogSummary}
-
-Top Specialists:
-${prosSummary}`;
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: `${systemInstruction}\n\nUser query: "${message}"` }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 600,
-        },
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(`Gemini API error ${response.status}`);
-  }
-
-  const data = await response.json();
-  const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawText) return null;
-
-  // Clean code fence formatting if present
-  const cleanedJson = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
-  return JSON.parse(cleanedJson);
-}
-
-// Live OpenAI Integration
-async function callOpenAI(message: string, apiKey: string) {
-  const serviceCatalogSummary = ALL_20_SERVICES.map(
-    (s) => `${s.id}: ${s.name} (${s.category}) - ₹${s.price}`
-  ).join("\n");
-
-  const systemPrompt = `You are "Home Buddy", the elite AI home concierge for CoopServe.
-Washing machines are "Appliance Repair" (svc-6), NOT AC.
-Output strict JSON with fields: text, diagnosticPoints (array), recommendedService (id, name, price, duration, url), action (label, url), safetyTip.
-Catalog:
-${serviceCatalogSummary}`;
-
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: message },
-      ],
-      temperature: 0.2,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenAI API error ${response.status}`);
-  }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content;
-  return content ? JSON.parse(content) : null;
 }

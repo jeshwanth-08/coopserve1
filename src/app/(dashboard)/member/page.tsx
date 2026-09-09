@@ -179,7 +179,7 @@ export default async function MemberDashboard() {
                         {req.description}
                       </p>
                     </div>
-                    <span className="text-xs text-slate-400 shrink-0 font-medium">
+                    <span className="text-xs text-slate-400 shrink-0 font-medium" suppressHydrationWarning>
                       {new Date(req.createdAt).toLocaleDateString()}
                     </span>
                   </div>

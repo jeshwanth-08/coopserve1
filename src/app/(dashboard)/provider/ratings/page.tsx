@@ -158,7 +158,7 @@ export default async function ProviderRatingsPage() {
 
                 <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1">
                   <span>Task: {(r.request?.description || "Service request").slice(0, 70)}...</span>
-                  <span>{new Date(r.createdAt).toLocaleDateString()}</span>
+                  <span suppressHydrationWarning>{new Date(r.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
             ))}

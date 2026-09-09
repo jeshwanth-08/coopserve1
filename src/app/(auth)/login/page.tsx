@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Users, Lock, Mail, ArrowRight, AlertCircle } from "lucide-react";
+import { Users, Lock, Mail, ArrowRight, AlertCircle, KeyRound } from "lucide-react";
 import { DEMO_ACCOUNTS } from "@/components/DemoAccountSwitcher";
 
 function LoginForm() {
@@ -35,11 +35,17 @@ function LoginForm() {
         return;
       }
 
-      if (returnUrl) {
+      const isSelfAuthUrl =
+        !returnUrl ||
+        returnUrl.startsWith("/login") ||
+        returnUrl.startsWith("/auth") ||
+        returnUrl.startsWith("/register");
+
+      if (!isSelfAuthUrl) {
         router.push(returnUrl);
-      } else if (data.user.role === "ADMIN") {
+      } else if (data.user?.role === "ADMIN") {
         router.push("/admin");
-      } else if (data.user.role === "PROVIDER") {
+      } else if (data.user?.role === "PROVIDER") {
         router.push("/provider");
       } else {
         router.push("/member");
@@ -62,7 +68,13 @@ function LoginForm() {
       });
       const data = await res.json();
       if (data.success) {
-        router.push(returnUrl || data.redirectUrl);
+        const isSelfAuthUrl =
+          !returnUrl ||
+          returnUrl.startsWith("/login") ||
+          returnUrl.startsWith("/auth") ||
+          returnUrl.startsWith("/register");
+
+        router.push(!isSelfAuthUrl ? returnUrl : data.redirectUrl);
         router.refresh();
       } else {
         setError(data.error || "Quick login failed");
@@ -110,15 +122,20 @@ function LoginForm() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-900"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold uppercase text-slate-600">
+                  Password
+                </label>
+                <span className="text-[11px] text-slate-400">
+                  Demo: password123 / admin123
+                </span>
+              </div>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                 <input
@@ -127,7 +144,7 @@ function LoginForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-900"
                 />
               </div>
             </div>
@@ -149,7 +166,7 @@ function LoginForm() {
                 1-Click Demo Logins
               </span>
               <span className="text-[11px] text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded">
-                Pre-seeded
+                One-Click
               </span>
             </div>
             <div className="space-y-2">
@@ -157,21 +174,22 @@ function LoginForm() {
                 const IconComponent = acc.icon;
                 return (
                   <button
-                    key={acc.email}
+                    key={`${acc.email}-${acc.name}`}
+                    type="button"
                     onClick={() => handleQuickLogin(acc.email)}
                     disabled={loading}
-                    className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-left transition-all text-xs group"
+                    className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-left transition-all text-xs group disabled:opacity-50"
                   >
                     <div className="flex items-center gap-2">
                       <div className={`p-1.5 rounded-md ${acc.color}`}>
-                        <IconComponent className="w-3.5 h-3.5" />
+                        {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
                       </div>
                       <div>
                         <span className="font-semibold text-slate-800 group-hover:text-blue-700">
                           {acc.name}
                         </span>
                         <span className="text-[11px] text-slate-400 block">
-                          {acc.label}
+                          {acc.label} ({acc.email})
                         </span>
                       </div>
                     </div>
