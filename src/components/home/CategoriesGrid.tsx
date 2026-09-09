@@ -15,6 +15,7 @@ import {
   Car,
   Home,
   ArrowRight,
+  Sprout,
 } from "lucide-react";
 import { CATEGORIES, CategoryItem, ServiceItem, findMatchingServiceForCategory } from "@/lib/homeData";
 
@@ -36,6 +37,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Truck: <Truck className="w-5 h-5 text-blue-600" />,
   Car: <Car className="w-5 h-5 text-teal-600" />,
   Home: <Home className="w-5 h-5 text-emerald-700" />,
+  Sprout: <Sprout className="w-5 h-5 text-emerald-600" />,
 };
 
 export default function CategoriesGrid({ onSelectCategory, onOpenBooking }: CategoriesGridProps) {
@@ -46,7 +48,7 @@ export default function CategoriesGrid({ onSelectCategory, onOpenBooking }: Cate
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-bold border border-brand-200 mb-2">
             <Sparkles className="w-3.5 h-3.5 text-brand-600" />
-            <span>12 Core Disciplines</span>
+            <span>Cooperative Core Disciplines</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
             Everything your home needs

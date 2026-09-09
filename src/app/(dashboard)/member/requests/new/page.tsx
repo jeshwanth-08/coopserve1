@@ -25,8 +25,25 @@ function NewRequestForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const proQuery = searchParams.get("pro") || searchParams.get("providerId") || "";
+  const catParam = (searchParams.get("category") || searchParams.get("service") || searchParams.get("slug") || "").toLowerCase().trim();
 
-  const [category, setCategory] = useState<string>(CATEGORIES[0]);
+  const initialCat = React.useMemo(() => {
+    if (!catParam) return CATEGORIES[0];
+    const found = CATEGORIES.find(
+      (c) =>
+        (c as string).toLowerCase() === catParam ||
+        (c as string).toLowerCase().includes(catParam) ||
+        catParam.includes((c as string).toLowerCase()) ||
+        (catParam.includes("garden") && (c as string) === "Gardener") ||
+        (catParam.includes("electric") && (c as string) === "Electrician") ||
+        (catParam.includes("plumb") && (c as string) === "Plumber") ||
+        (catParam.includes("paint") && (c as string) === "Painter") ||
+        (catParam.includes("clean") && (c as string) === "Cleaner")
+    );
+    return found || CATEGORIES[0];
+  }, [catParam]);
+
+  const [category, setCategory] = useState<string>(initialCat);
   const [visibility, setVisibility] = useState<"PERSONAL" | "COMMUNITY">("PERSONAL");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
@@ -36,6 +53,13 @@ function NewRequestForm() {
   const [selectedProviderId, setSelectedProviderId] = useState<string>(proQuery);
   const [categoryProviders, setCategoryProviders] = useState<any[]>([]);
   const [selectedSocietyPool, setSelectedSocietyPool] = useState<SocietyPoolItem | null>(null);
+
+  // Sync category if URL parameter updates
+  useEffect(() => {
+    if (initialCat) {
+      setCategory(initialCat);
+    }
+  }, [initialCat]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

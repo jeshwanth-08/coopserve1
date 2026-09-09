@@ -41,6 +41,8 @@ const SERVICE_CATEGORY_TABS = [
   { id: "Plumbing", label: "🔧 Plumbing" },
   { id: "HVAC & AC", label: "❄️ AC & Appliances" },
   { id: "Cleaning", label: "✨ Cleaning" },
+  { id: "Gardening", label: "🌿 Gardening" },
+  { id: "Cooking", label: "🍳 Cooking" },
   { id: "Carpentry", label: "🔨 Carpentry" },
   { id: "Painting", label: "🎨 Painting" },
   { id: "Pest Control", label: "🛡️ Pest Control" },

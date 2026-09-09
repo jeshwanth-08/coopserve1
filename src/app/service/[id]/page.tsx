@@ -31,11 +31,16 @@ import {
   CUSTOMER_REVIEWS,
   TOP_PROFESSIONALS,
   ServiceItem,
+  findMatchingServiceForCategory,
 } from "@/lib/homeData";
 
+interface ServiceDetailPageProps {
+  params: { id: string };
+}
+
 export default function ServiceDetailPage() {
-  const params = useParams();
   const router = useRouter();
+  const params = useParams();
   const serviceId = (params?.id as string) || "svc-1";
 
   const [selectedCity, setSelectedCity] = useState("Bengaluru");
@@ -46,7 +51,16 @@ export default function ServiceDetailPage() {
   const [beforeAfterTab, setBeforeAfterTab] = useState<"after" | "before">("after");
 
   const service =
-    POPULAR_SERVICES.find((s) => s.id === serviceId || s.slug === serviceId) || POPULAR_SERVICES[0];
+    POPULAR_SERVICES.find(
+      (s) =>
+        s.id === serviceId ||
+        s.slug === serviceId ||
+        s.categorySlug === serviceId ||
+        s.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === serviceId.toLowerCase() ||
+        s.name.toLowerCase() === serviceId.toLowerCase()
+    ) ||
+    findMatchingServiceForCategory(serviceId) ||
+    POPULAR_SERVICES[0];
 
 
   const similarServices = POPULAR_SERVICES.filter(

@@ -489,6 +489,69 @@ export const CATEGORIES: CategoryDetail[] = [
     faqs: [
       { q: "Is there any warranty on modular kitchen fittings?", a: "Yes, all our tandem drawers and soft-close hinges carry a 5-year manufacturer replacement warranty." }
     ]
+  },
+  {
+    id: "cat-13",
+    title: "Gardening & Lawn Care",
+    slug: "gardener",
+    aliases: ["gardening", "gardener", "garden", "lawn-care", "landscaping", "plant-care", "lawn-mowing"],
+    tagline: "Lawn mowing, pruning, pest spray & potting",
+    heroHeadline: "Expert Cooperative Gardeners for Lawn Care, Pruning & Balcony Plants",
+    iconName: "Sparkles",
+    image: "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?auto=format&fit=crop&w=600&q=80",
+    coverBanner: "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?auto=format&fit=crop&w=1200&q=85",
+    popularServices: ["Lawn Mowing & Edging", "Potted Plant Care & Pruning", "Organic Neem Pest Spray", "Soil Aeration & Manure"],
+    startingPrice: 299,
+    badge: "Eco Friendly",
+    description: "Certified cooperative gardeners for balcony plant maintenance, lawn mowing, hedge shaping, organic neem oil pest control, and potting soil enrichment.",
+    whatsIncluded: [
+      "Pruning dead foliage, weeding, and root aeration",
+      "Organic vermicompost and neem oil pest treatment",
+      "Lawn mowing and neat edging for lawns and gardens",
+      "Dry leaf debris collection and neat bagging"
+    ],
+    whatsNotIncluded: [
+      "Cost of new ceramic pots or exotic nursery saplings (billed transparently at nursery MRP)"
+    ],
+    processSteps: [
+      { title: "Plant Health Inspection", desc: "Checking soil moisture, pest presence, and sun exposure." },
+      { title: "Pruning & Weeding", desc: "Removing yellowing leaves, weeds, and aerating topsoil." },
+      { title: "Organic Feeding & Spray", desc: "Applying balanced organic nutrition and protective neem mist." }
+    ],
+    faqs: [
+      { q: "Do the gardeners bring their own tools and pruning shears?", a: "Yes, our cooperative gardeners arrive equipped with grass cutters, pruners, soil tillers, and spray pumps." }
+    ]
+  },
+  {
+    id: "cat-14",
+    title: "Cook & Home Chef",
+    slug: "cook",
+    aliases: ["cook", "cooking", "chef", "home-chef", "meal-prep", "daily-cook"],
+    tagline: "Customized home-cooked meals & party catering",
+    heroHeadline: "Hygienic Home Cooks for Daily Meals & Authentic Cuisines",
+    iconName: "Flame",
+    image: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=600&q=80",
+    coverBanner: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1200&q=85",
+    popularServices: ["Daily Meal Preparation", "North & South Indian Cuisines", "Healthy Low-Oil Diet Meals", "Weekend Family Feast"],
+    startingPrice: 349,
+    badge: "Chef Verified",
+    description: "Trained and background-verified home cooks for breakfast, lunch, or dinner customized to your family's specific dietary and spice preferences.",
+    whatsIncluded: [
+      "Cooking fresh authentic meals to your taste preferences",
+      "Hygienic chef hairnet and apron standards",
+      "Wiping down kitchen stovetop and preparation counters"
+    ],
+    whatsNotIncluded: [
+      "Purchasing raw grocery ingredients and vegetables"
+    ],
+    processSteps: [
+      { title: "Menu & Spice Calibration", desc: "Chef aligns with your salt, oil, and spice specifications." },
+      { title: "Fresh Preparation", desc: "Hygienic cooking in your home kitchen." },
+      { title: "Countertop Clean Up", desc: "Wiping counters and packing food in casseroles." }
+    ],
+    faqs: [
+      { q: "Can the cook adjust to specific diet plans like keto or low-oil?", a: "Yes, all our cooperative cooks are trained in healthy cooking practices and will adhere strictly to your instructions." }
+    ]
   }
 ];
 
@@ -592,6 +655,22 @@ export const TOP_PROFESSIONALS: ProProfile[] = [
     quote: "A clean coil restores up to 30% lost efficiency and drops your power bill noticeably.",
     serviceId: "svc-5",
     serviceSlug: "ac-technician"
+  },
+  {
+    id: "pro-5",
+    name: "Ramesh Gowda",
+    role: "Master Horticulturist & Garden Specialist",
+    city: "Bengaluru",
+    rating: 4.96,
+    reviewsCount: 510,
+    jobsCompleted: 1360,
+    experienceYears: 12,
+    avatar: "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&w=300&q=80",
+    verified: true,
+    specialty: "Lawn trimming, balcony plants, pruning & organic vermicompost",
+    quote: "Healthy, nourished greens bring positive energy and oxygen into your living space.",
+    serviceId: "svc-9",
+    serviceSlug: "gardener"
   },
 ];
 
@@ -879,21 +958,49 @@ export function findMatchingServiceForCategory(categorySlugOrTitle: string): Ser
     "bike-repair": "mechanic",
     "home-improvement": "painter",
     "cook": "cook",
+    "cooking": "cook",
+    "chef": "cook",
+    "home-chef": "cook",
     "gardener": "gardener",
+    "gardening": "gardener",
+    "garden": "gardener",
+    "lawn": "gardener",
+    "lawn-mowing": "gardener",
+    "lawn-care": "gardener",
+    "landscaping": "gardener",
+    "plants": "gardener",
+    "plant-care": "gardener",
+    "horticulture": "gardener",
     "tutor": "tutor",
+    "tutoring": "tutor",
+    "education": "tutor",
     "computer-repair": "computer-repair",
+    "laptop-repair": "computer-repair",
+    "pc-repair": "computer-repair",
     "mobile-repair": "mobile-repair",
+    "phone-repair": "mobile-repair",
     "tailor": "tailor",
+    "tailoring": "tailor",
+    "stitching": "tailor",
     "driver": "driver",
+    "driving": "driver",
+    "chauffeur": "driver",
     "babysitter": "babysitter",
+    "childcare": "babysitter",
+    "nanny": "babysitter",
     "pet-care": "pet-care",
+    "pet": "pet-care",
+    "dog-walker": "pet-care",
     "event-services": "event-services",
+    "event": "event-services",
+    "events": "event-services",
+    "decor": "event-services",
   };
 
   const targetSlug = MAP[norm] || norm;
   return (
     POPULAR_SERVICES.find((s) => s.slug === targetSlug || s.categorySlug === targetSlug || s.id === targetSlug) ||
-    POPULAR_SERVICES.find((s) => s.name.toLowerCase().includes(norm) || s.category.toLowerCase().includes(norm))
+    POPULAR_SERVICES.find((s) => s.name.toLowerCase() === norm || s.name.toLowerCase().includes(norm) || s.category.toLowerCase().includes(norm))
   );
 }
 
@@ -907,6 +1014,29 @@ export function getMatchingServiceForPro(pro: ProProfile): ServiceItem {
     if (found) return found;
   }
   const roleLower = (pro.role + " " + (pro.specialty || "")).toLowerCase();
+  if (
+    roleLower.includes("garden") ||
+    roleLower.includes("lawn") ||
+    roleLower.includes("plant") ||
+    roleLower.includes("landscape") ||
+    roleLower.includes("horticult")
+  ) {
+    return (
+      POPULAR_SERVICES.find((s) => s.slug === "gardener" || s.id === "svc-9") ||
+      POPULAR_SERVICES[0]
+    );
+  }
+  if (
+    roleLower.includes("cook") ||
+    roleLower.includes("chef") ||
+    roleLower.includes("meal") ||
+    roleLower.includes("culinary")
+  ) {
+    return (
+      POPULAR_SERVICES.find((s) => s.slug === "cook" || s.id === "svc-8") ||
+      POPULAR_SERVICES[0]
+    );
+  }
   if (
     roleLower.includes("ac") ||
     roleLower.includes("cooling") ||
@@ -937,6 +1067,35 @@ export function getMatchingServiceForPro(pro: ProProfile): ServiceItem {
   ) {
     return (
       POPULAR_SERVICES.find((s) => s.slug === "beauty-services" || s.id === "svc-19") ||
+      POPULAR_SERVICES[0]
+    );
+  }
+  if (
+    roleLower.includes("paint") ||
+    roleLower.includes("wall")
+  ) {
+    return (
+      POPULAR_SERVICES.find((s) => s.slug === "painter" || s.id === "svc-4") ||
+      POPULAR_SERVICES[0]
+    );
+  }
+  if (
+    roleLower.includes("carpent") ||
+    roleLower.includes("wood") ||
+    roleLower.includes("furniture")
+  ) {
+    return (
+      POPULAR_SERVICES.find((s) => s.slug === "carpenter" || s.id === "svc-3") ||
+      POPULAR_SERVICES[0]
+    );
+  }
+  if (
+    roleLower.includes("clean") ||
+    roleLower.includes("sanit") ||
+    roleLower.includes("housekeep")
+  ) {
+    return (
+      POPULAR_SERVICES.find((s) => s.slug === "house-cleaning" || s.id === "svc-7") ||
       POPULAR_SERVICES[0]
     );
   }

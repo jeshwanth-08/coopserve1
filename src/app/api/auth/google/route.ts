@@ -121,17 +121,56 @@ export async function POST(req: Request) {
         isNewUser = true;
         console.log(`[Google Auth] Created new ${assignedRole} account for Google user: ${targetEmail}`);
       } else {
-        console.log(`[Google Auth] Signed in existing account (${user.role}) for Google user: ${targetEmail}`);
+        // If user signs in selecting PROVIDER role, ensure role and specialization are updated
+        if (requestedRole === "PROVIDER") {
+          const chosenCategory = requestedCategory || "Gardener";
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { role: ROLES.PROVIDER },
+            include: { providerProfile: true },
+          });
+
+          await prisma.providerProfile.upsert({
+            where: { userId: user.id },
+            update: {
+              serviceCategories: JSON.stringify([chosenCategory]),
+              skills: JSON.stringify(
+                requestedSkills ? [requestedSkills] : [`Certified ${chosenCategory} Specialist`]
+              ),
+              isActive: true,
+              isVerified: true,
+            },
+            create: {
+              userId: user.id,
+              skills: JSON.stringify(
+                requestedSkills ? [requestedSkills] : [`Certified ${chosenCategory} Specialist`]
+              ),
+              serviceCategories: JSON.stringify([chosenCategory]),
+              certifications: JSON.stringify([]),
+              serviceArea: "All Localities",
+              isVerified: true,
+              isActive: true,
+              avgRating: 5.0,
+              totalReviews: 0,
+            },
+          });
+        }
+        console.log(`[Google Auth] Signed in/updated existing account (${user.role}) for Google user: ${targetEmail}`);
       }
     } catch (dbErr) {
       console.warn("[Google Auth] Database query error, using fallback demo user:", dbErr);
       const assignedRole = requestedRole === "PROVIDER" ? ROLES.PROVIDER : ROLES.MEMBER;
+      const chosenCategory = requestedCategory || "Gardener";
       user = {
         id: `usr-google-${targetEmail.replace(/[^a-z0-9]/g, "-")}`,
         name: targetName,
         email: targetEmail,
         role: assignedRole,
         locality: "Greenwood Heights",
+        providerProfile: assignedRole === ROLES.PROVIDER ? {
+          serviceCategories: JSON.stringify([chosenCategory]),
+          skills: JSON.stringify([`Certified ${chosenCategory} Specialist`]),
+        } : null,
       };
     }
 
