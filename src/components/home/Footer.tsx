@@ -32,7 +32,7 @@ export default function Footer() {
             </Link>
 
             <p className="text-slate-400 leading-relaxed max-w-sm">
-              India's premier home services cooperative connecting households with background-verified, certified professionals with standardized fixed upfront pricing and 30-day rework warranty.
+              India&apos;s premier home services cooperative connecting households with background-verified, certified professionals with standardized fixed upfront pricing and 30-day rework warranty.
             </p>
 
             <div className="flex items-center gap-4 text-xs text-slate-300" suppressHydrationWarning>
