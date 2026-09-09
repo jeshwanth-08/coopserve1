@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -18,6 +18,7 @@ import {
   MessageSquare,
   ShieldCheck,
   Send,
+  Building,
 } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import UrgencyBadge from "@/components/UrgencyBadge";
@@ -219,6 +220,36 @@ export default function MemberRequestDetailPage({
             </div>
           </div>
           <UrgencyBadge isEmergency={true} />
+        </div>
+      )}
+
+      {/* Society Group Pool Banner */}
+      {(request.groupCode || request.societyName || request.pool) && (
+        <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-blue-900 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <Building className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-800">
+                  Society Group Pool
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-blue-200 text-blue-800">
+                  {request.groupCode || request.pool?.code}
+                </span>
+              </div>
+              <p className="text-xs text-blue-700 mt-0.5">
+                Pooled for <strong>{request.societyName || request.pool?.societyName}</strong>
+                {request.pool?.serviceWindow && ` • Preferred Window: ${request.pool.serviceWindow}`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            <span className="text-[11px] font-semibold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full border border-emerald-300">
+              Coordinated Visit &bull; Zero Doorstep Fee
+            </span>
+          </div>
         </div>
       )}
 

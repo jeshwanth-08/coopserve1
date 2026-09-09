@@ -64,6 +64,7 @@ export async function GET(req: Request) {
           },
         },
         rating: true,
+        pool: true,
         _count: {
           select: { coSigns: true, comments: true },
         },
@@ -127,6 +128,9 @@ export async function POST(req: Request) {
       selectedProviderId,
       preferredProviderId,
       providerId,
+      societyName,
+      groupCode,
+      poolId,
     } = body;
 
     const requestedProviderId = selectedProviderId || preferredProviderId || providerId || null;
@@ -140,6 +144,25 @@ export async function POST(req: Request) {
 
     const targetLocality = locality || user.locality || "Greenwood Heights";
 
+    // Optional Society Pool resolution
+    let resolvedPoolId = poolId || null;
+    let resolvedGroupCode = groupCode || null;
+    let resolvedSociety = societyName || null;
+
+    if (!resolvedPoolId && resolvedGroupCode) {
+      try {
+        const pool = await prisma.societyPool.findUnique({
+          where: { code: resolvedGroupCode.trim().toUpperCase() },
+        });
+        if (pool) {
+          resolvedPoolId = pool.id;
+          resolvedSociety = resolvedSociety || pool.societyName;
+        }
+      } catch (err) {
+        console.warn("Notice: could not resolve society pool by code:", err);
+      }
+    }
+
     const newRequest = await prisma.serviceRequest.create({
       data: {
         memberId: user.userId,
@@ -151,6 +174,9 @@ export async function POST(req: Request) {
         isEmergency: Boolean(isEmergency),
         preferredDateTime: preferredDateTime ? new Date(preferredDateTime) : null,
         status: REQUEST_STATUS.PENDING,
+        poolId: resolvedPoolId,
+        societyName: resolvedSociety,
+        groupCode: resolvedGroupCode,
       },
     });
 
@@ -201,6 +227,7 @@ export async function POST(req: Request) {
         assignedProvider: {
           select: { id: true, name: true, phone: true, locality: true },
         },
+        pool: true,
       },
     });
 

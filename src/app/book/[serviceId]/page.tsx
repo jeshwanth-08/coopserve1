@@ -47,6 +47,8 @@ import {
   PaymentReceipt,
   processRealisticPayment,
 } from "@/lib/paymentService";
+import SocietyGroupPoolSection from "@/components/booking/SocietyGroupPoolSection";
+import { SocietyPoolItem } from "@/lib/societyPoolService";
 
 function BookingPageContent() {
   const params = useParams();
@@ -96,6 +98,7 @@ function BookingPageContent() {
   const [selectedCity, setSelectedCity] = useState("Bengaluru");
   const [customerName, setCustomerName] = useState("Aarav Mehta");
   const [customerPhone, setCustomerPhone] = useState("+91 98765 43210");
+  const [selectedSocietyPool, setSelectedSocietyPool] = useState<SocietyPoolItem | null>(null);
 
   // Additional Details & Media State
   const [issueNotes, setIssueNotes] = useState(
@@ -275,6 +278,9 @@ function BookingPageContent() {
           preferredProId: proPreferenceMode === "manual" ? selectedProId : undefined,
           couponCode: couponApplied ? couponCode : undefined,
           discountAmount,
+          societyName: selectedSocietyPool?.societyName,
+          groupCode: selectedSocietyPool?.code,
+          poolId: selectedSocietyPool?.id,
         });
         setBookingState("success");
       } catch (err: any) {
@@ -707,6 +713,15 @@ function BookingPageContent() {
                     </div>
                   </div>
                 </div>
+
+                {/* Optional Society/Apartment Group Pool Section */}
+                <SocietyGroupPoolSection
+                  category={service.category}
+                  locality={locality}
+                  addressLine={addressLine}
+                  selectedPool={selectedSocietyPool}
+                  onSelectPool={setSelectedSocietyPool}
+                />
 
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                   <button

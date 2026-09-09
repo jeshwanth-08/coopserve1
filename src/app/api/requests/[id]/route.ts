@@ -62,6 +62,7 @@ export async function GET(
             },
             orderBy: { createdAt: "asc" },
           },
+          pool: true,
         },
       });
     } catch (dbErr) {

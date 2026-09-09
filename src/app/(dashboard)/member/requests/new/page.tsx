@@ -18,6 +18,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { CATEGORIES, LOCALITIES } from "@/lib/constants";
+import SocietyGroupPoolSection from "@/components/booking/SocietyGroupPoolSection";
+import { SocietyPoolItem } from "@/lib/societyPoolService";
 
 function NewRequestForm() {
   const router = useRouter();
@@ -33,6 +35,7 @@ function NewRequestForm() {
   const [preferredDateTime, setPreferredDateTime] = useState("");
   const [selectedProviderId, setSelectedProviderId] = useState<string>(proQuery);
   const [categoryProviders, setCategoryProviders] = useState<any[]>([]);
+  const [selectedSocietyPool, setSelectedSocietyPool] = useState<SocietyPoolItem | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -90,6 +93,9 @@ function NewRequestForm() {
           isEmergency,
           preferredDateTime: preferredDateTime || null,
           selectedProviderId: selectedProviderId || undefined,
+          societyName: selectedSocietyPool?.societyName,
+          groupCode: selectedSocietyPool?.code,
+          poolId: selectedSocietyPool?.id,
         }),
       });
 
@@ -348,6 +354,15 @@ function NewRequestForm() {
                 : "Normal priority: The highest-rated available specialist will be assigned automatically."}
             </p>
           </div>
+
+          {/* Optional Society/Apartment Group Pool Section */}
+          <SocietyGroupPoolSection
+            category={category}
+            locality={locality}
+            addressLine={address}
+            selectedPool={selectedSocietyPool}
+            onSelectPool={setSelectedSocietyPool}
+          />
 
           {/* Submit CTA */}
           <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">

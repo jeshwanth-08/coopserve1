@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -21,6 +21,7 @@ import {
   User,
   ShieldCheck,
   RotateCcw,
+  Building,
 } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import UrgencyBadge from "@/components/UrgencyBadge";
@@ -272,6 +273,19 @@ export default function ProviderAssignedRequestsPage() {
                     Requested on {new Date(req.createdAt).toLocaleDateString()}
                   </div>
                 </div>
+
+                {/* Society Pool Badge if pooled */}
+                {(req.groupCode || req.societyName || req.pool) && (
+                  <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-medium">
+                    <Building className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>
+                      <strong>Society Pool:</strong> {req.societyName || req.pool?.societyName} &bull; Group Code: <span className="font-mono font-bold text-blue-800 bg-blue-100 px-1.5 py-0.5 rounded">{req.groupCode || req.pool?.code}</span>
+                    </span>
+                    {req.pool?.serviceWindow && (
+                      <span className="text-blue-700 hidden sm:inline">&bull; Window: {req.pool.serviceWindow}</span>
+                    )}
+                  </div>
+                )}
 
                 {/* Description & Member info */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
