@@ -179,14 +179,14 @@ export default function Navbar({
                   <span>{t("nav.welfare", "Welfare & e-Shram")}</span>
                 </Link>
 
-                {/* HOME+ Membership */}
+                {/* VIP Membership */}
                 <Link
                   href="/membership"
                   className="flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200/70 transition-colors shrink-0"
+                  title="VIP Membership"
                 >
                   <Crown className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
-                  <span>HOME+</span>
-                  <span className="bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase leading-none">VIP</span>
+                  <span>VIP</span>
                 </Link>
               </nav>
             </div>
