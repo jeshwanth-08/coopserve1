@@ -13,12 +13,23 @@ import {
   CheckCircle2,
   Settings,
   HelpCircle,
+  Camera,
+  Upload,
+  Image as ImageIcon,
+  Wrench,
+  Flame,
+  Droplets,
+  Zap,
+  Check,
 } from "lucide-react";
+import { AiDiagnosisResult } from "@/lib/aiProblemDetector";
 
 interface Message {
   id: string;
   sender: "bot" | "user";
   text: string;
+  imageThumbnail?: string;
+  visualDiagnosis?: AiDiagnosisResult;
   diagnosticPoints?: string[];
   recommendedService?: {
     id: string;
@@ -39,14 +50,52 @@ interface Message {
   isEmergency?: boolean;
 }
 
+const SAMPLE_DEFECTS = [
+  {
+    id: "pipe-leak",
+    title: "Leaking Pipe Joint",
+    icon: Droplets,
+    badge: "Plumbing",
+    thumb: "https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&w=400&q=80",
+    desc: "Persistent dripping from PVC connector under sink",
+  },
+  {
+    id: "sparking-mcb",
+    title: "Tripping MCB Breaker",
+    icon: Zap,
+    badge: "Electrical",
+    thumb: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=400&q=80",
+    desc: "Breaker switch smells burnt and trips upon AC start",
+  },
+  {
+    id: "ac-frost",
+    title: "AC Coil Freezing & Drip",
+    icon: Flame,
+    badge: "HVAC / AC",
+    thumb: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=400&q=80",
+    desc: "Ice frost on evaporator cooling fins and warm airflow",
+  },
+  {
+    id: "ceiling-seepage",
+    title: "Ceiling Seepage & Mold",
+    icon: Droplets,
+    badge: "Waterproofing",
+    thumb: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80",
+    desc: "Yellowish damp patches and peeling paint on ceiling",
+  },
+];
+
 export default function HomeBuddyWidget() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPhotoDiagnosis, setShowPhotoDiagnosis] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [activeApiKey, setActiveApiKey] = useState("");
   const [inputQuery, setInputQuery] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [isDiagnosing, setIsDiagnosing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,7 +108,7 @@ export default function HomeBuddyWidget() {
     {
       id: "m-init-1",
       sender: "bot",
-      text: "Hello! I am Home Buddy ⚡, your AI home maintenance concierge. Tell me what's happening (e.g., 'poor working washing machine', 'AC not cooling', or 'water leaking under sink') and I will diagnose the issue and match you with the right cooperative specialist.",
+      text: "Hello! I am Home Buddy ⚡, your AI home maintenance concierge. Describe your issue or tap the 📸 Camera button to diagnose defects directly from a photo!",
     },
   ]);
 
@@ -71,7 +120,7 @@ export default function HomeBuddyWidget() {
     if (isOpen) {
       scrollToBottom();
     }
-  }, [messages, isOpen, isTyping]);
+  }, [messages, isOpen, isTyping, showPhotoDiagnosis]);
 
   const handleSaveApiKey = (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +134,11 @@ export default function HomeBuddyWidget() {
     if (e) e.preventDefault();
     const textToSend = customText || inputQuery;
     if (!textToSend.trim()) return;
+
+    const lower = textToSend.toLowerCase();
+    if (lower.includes("photo") || lower.includes("camera") || lower.includes("image") || lower.includes("diagnose photo")) {
+      setShowPhotoDiagnosis(true);
+    }
 
     const userMsg: Message = {
       id: "u-" + Date.now(),
@@ -130,7 +184,89 @@ export default function HomeBuddyWidget() {
     }
   };
 
-  // Local fallback if network fetch fails
+  const handleRunPhotoDiagnosis = async (options: { sampleId?: string; imageBase64?: string; title: string; thumb?: string }) => {
+    setShowPhotoDiagnosis(false);
+    setIsDiagnosing(true);
+
+    // Add user message
+    const userMsg: Message = {
+      id: "u-" + Date.now(),
+      sender: "user",
+      text: `📸 Requested AI Photo Diagnosis for: ${options.title}`,
+      imageThumbnail: options.thumb,
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setIsTyping(true);
+
+    try {
+      const res = await fetch("/api/ai/diagnose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          samplePresetId: options.sampleId,
+          imageBase64: options.imageBase64,
+          apiKey: activeApiKey || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.diagnosis) {
+        const diag: AiDiagnosisResult = data.diagnosis;
+        const botMsg: Message = {
+          id: "b-" + Date.now(),
+          sender: "bot",
+          text: `🔍 AI Visual Analysis Complete: **${diag.problemTitle}**`,
+          imageThumbnail: options.thumb,
+          visualDiagnosis: diag,
+          safetyTip: diag.actionableTip || diag.urgencyAdvice,
+          action: {
+            label: `Book ${diag.recommendedService.name} (from ₹${diag.recommendedService.startingPrice})`,
+            url: diag.bookingUrl || `/book/${diag.recommendedService.id}`,
+          },
+        };
+        setMessages((prev) => [...prev, botMsg]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: "b-" + Date.now(),
+            sender: "bot",
+            text: data.message || "I could not identify a domestic maintenance defect in this photo. Please ensure good lighting or pick a sample.",
+          },
+        ]);
+      }
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: "b-" + Date.now(),
+          sender: "bot",
+          text: "Connection to AI Vision Service timed out. Please try again or test an instant sample issue.",
+        },
+      ]);
+    } finally {
+      setIsTyping(false);
+      setIsDiagnosing(false);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const b64 = uploadEvent.target?.result as string;
+      handleRunPhotoDiagnosis({
+        imageBase64: b64,
+        title: file.name,
+        thumb: b64,
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
   const fallbackDiagnostic = (text: string) => {
     const q = text.toLowerCase();
     if (q.includes("washing") || q.includes("washer") || q.includes("laundry") || q.includes("dryer")) {
@@ -158,7 +294,7 @@ export default function HomeBuddyWidget() {
         {
           id: "b-" + Date.now(),
           sender: "bot",
-          text: "I am ready to help! Please tell me which home issue you need solved.",
+          text: "I am ready to help! You can describe the issue in words, or click the 📸 camera button below to run a visual diagnosis.",
           action: {
             label: "Browse All Services",
             url: "/services",
@@ -169,11 +305,25 @@ export default function HomeBuddyWidget() {
   };
 
   const handleQuickPrompt = (prompt: string) => {
+    if (prompt.includes("Photo") || prompt.includes("Diagnose")) {
+      setShowPhotoDiagnosis(true);
+      return;
+    }
     handleSend(undefined, prompt);
   };
 
   return (
     <>
+      {/* Hidden File Input for Camera / Photo Upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
       {/* Floating Entry Trigger Button */}
       <div className="fixed bottom-20 md:bottom-6 right-5 z-40">
         {!isOpen && (
@@ -189,9 +339,11 @@ export default function HomeBuddyWidget() {
               <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-900 animate-pulse" />
             </div>
             <div className="text-left hidden sm:block">
-              <span className="block text-[11px] font-black text-white">Home Buddy</span>
+              <span className="block text-[11px] font-black text-white flex items-center gap-1">
+                Home Buddy <Camera className="w-3 h-3 text-cyan-300" />
+              </span>
               <span className="block text-[9px] text-slate-300 font-medium">
-                {activeApiKey ? "Gemini AI Active" : "Smart AI Diagnostic"}
+                Chat & AI Photo Diagnosis
               </span>
             </div>
           </button>
@@ -200,180 +352,266 @@ export default function HomeBuddyWidget() {
 
       {/* Floating AI Drawer / Widget Modal */}
       {isOpen && (
-        <div className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[420px] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[560px] max-h-[85vh] animate-in fade-in slide-in-from-bottom-5 duration-200">
+        <div className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[440px] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[590px] max-h-[88vh] animate-in fade-in slide-in-from-bottom-5 duration-200">
           {/* Header */}
-          <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+          <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-500 to-indigo-500 flex items-center justify-center text-white shadow-md">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
                 <h4 className="text-sm font-black text-white flex items-center gap-1.5">
-                  <span>Home Buddy</span>
-                  <span className="text-[9px] bg-brand-500/30 text-brand-300 border border-brand-400/40 px-1.5 py-0.2 rounded-full uppercase font-bold">
-                    {activeApiKey ? "Gemini AI" : "Smart Diagnostic"}
+                  <span>Home Buddy AI</span>
+                  <span className="text-[9px] bg-cyan-500/30 text-cyan-300 border border-cyan-400/40 px-1.5 py-0.2 rounded-full uppercase font-bold">
+                    Vision + Chat
                   </span>
                 </h4>
                 <p className="text-[10px] text-slate-300 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                  <span>20 Cooperative Trades • Online</span>
+                  <span>20 Cooperative Trades • Photo Diagnose Ready</span>
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setShowPhotoDiagnosis(!showPhotoDiagnosis)}
+                className={`p-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors ${
+                  showPhotoDiagnosis ? "bg-cyan-500 text-white" : "bg-white/10 hover:bg-white/20 text-cyan-300"
+                }`}
+                title="AI Photo Diagnosis"
+              >
+                <Camera className="w-4 h-4" />
+                <span className="hidden sm:inline text-[10px]">Diagnose</span>
+              </button>
               <button
                 onClick={() => setShowSettings(!showSettings)}
-                title="AI Settings & API Key"
-                className={`p-1.5 rounded-xl transition-colors ${
-                  showSettings ? "bg-brand-600 text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
-                }`}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                title="AI Settings"
               >
                 <Settings className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setIsOpen(false)}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                title="Close Home Buddy"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          {/* Optional API Key / Settings Dropdown */}
+          {/* Settings Drawer Overlay */}
           {showSettings && (
-            <div className="p-3.5 bg-slate-800 text-white text-xs border-b border-slate-700 animate-in fade-in space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-200 flex items-center gap-1.5">
-                  <Key className="w-3.5 h-3.5 text-brand-400" />
-                  <span>Google Gemini API Key (Optional)</span>
+            <div className="bg-slate-800 text-white p-4 border-b border-slate-700 animate-in slide-in-from-top duration-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-brand-300 flex items-center gap-1">
+                  <Key className="w-3.5 h-3.5" /> Google Gemini API Key
                 </span>
-                {activeApiKey ? (
-                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
-                    Active
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-slate-400 bg-slate-700 px-2 py-0.5 rounded">
-                    Built-in Engine
-                  </span>
-                )}
+                <span className="text-[10px] text-slate-400">Optional for custom quota</span>
               </div>
-              <p className="text-[11px] text-slate-300 leading-tight">
-                The built-in smart diagnostic engine handles all 20 services with zero dependencies. Optionally paste a Gemini API key for free-form reasoning:
-              </p>
-              <form onSubmit={handleSaveApiKey} className="flex gap-1.5 pt-1">
+              <form onSubmit={handleSaveApiKey} className="space-y-2">
                 <input
                   type="password"
                   value={apiKeyInput}
                   onChange={(e) => setApiKeyInput(e.target.value)}
-                  placeholder="AIzaSy..."
-                  className="flex-1 px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono text-[11px] focus:outline-none focus:border-brand-500"
+                  placeholder="Paste Gemini API Key (AIzaSy...)"
+                  className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-brand-500"
                 />
-                <button
-                  type="submit"
-                  className="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-bold"
-                >
-                  Save
-                </button>
-                {activeApiKey && (
+                <div className="flex justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      localStorage.removeItem("coopserve_gemini_key");
-                      setActiveApiKey("");
-                      setApiKeyInput("");
-                    }}
-                    className="px-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs"
+                    onClick={() => setShowSettings(false)}
+                    className="px-3 py-1 rounded-lg text-xs text-slate-400 hover:text-white"
                   >
-                    Clear
+                    Cancel
                   </button>
-                )}
+                  <button
+                    type="submit"
+                    className="px-3 py-1 rounded-lg bg-brand-600 hover:bg-brand-500 text-xs font-bold text-white shadow-sm"
+                  >
+                    Save Key
+                  </button>
+                </div>
               </form>
             </div>
           )}
 
-          {/* Chat Messages Body */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-slate-50/70">
+          {/* Photo Diagnosis Inline Panel */}
+          {showPhotoDiagnosis && (
+            <div className="bg-gradient-to-b from-cyan-950 via-slate-900 to-slate-900 text-white p-4 border-b border-cyan-800/50 space-y-3 animate-in slide-in-from-top duration-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center">
+                    <Camera className="w-3.5 h-3.5" />
+                  </div>
+                  <h5 className="text-xs font-bold text-white">Visual Defect Diagnosis</h5>
+                </div>
+                <button
+                  onClick={() => setShowPhotoDiagnosis(false)}
+                  className="text-slate-400 hover:text-white text-xs"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Upload button */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-center flex flex-col items-center justify-center gap-1 text-xs font-bold transition-all group"
+                >
+                  <Upload className="w-5 h-5 text-cyan-300 group-hover:scale-110 transition-transform" />
+                  <span>Upload / Snap Photo</span>
+                  <span className="text-[9px] text-slate-400 font-normal">JPG, PNG, Camera</span>
+                </button>
+
+                <div className="p-3 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-center text-[10px] text-slate-300 space-y-1">
+                  <span className="text-cyan-300 font-bold flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> Auto-Categorized
+                  </span>
+                  <p className="text-slate-400 text-[9px] leading-tight">
+                    Vision AI detects defect urgency, cost range, and matches certified cooperative pros.
+                  </p>
+                </div>
+              </div>
+
+              {/* Or Select Sample Issue */}
+              <div className="space-y-1.5 pt-1">
+                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                  Or Test with Sample Issue:
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {SAMPLE_DEFECTS.map((sample) => {
+                    const Icon = sample.icon;
+                    return (
+                      <button
+                        key={sample.id}
+                        onClick={() =>
+                          handleRunPhotoDiagnosis({
+                            sampleId: sample.id,
+                            title: sample.title,
+                            thumb: sample.thumb,
+                          })
+                        }
+                        className="text-left p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-2 transition-colors group"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={sample.thumb}
+                          alt={sample.title}
+                          className="w-8 h-8 rounded-lg object-cover shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold text-white truncate group-hover:text-cyan-300">
+                            {sample.title}
+                          </p>
+                          <p className="text-[9px] text-cyan-300/80">{sample.badge}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Messages Body */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/60">
             {messages.map((m) => (
               <div
                 key={m.id}
                 className={`flex gap-2.5 ${m.sender === "user" ? "justify-end" : "justify-start"}`}
               >
                 {m.sender === "bot" && (
-                  <div className="w-7 h-7 rounded-xl bg-brand-50 text-brand-600 border border-brand-200 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
                     <Sparkles className="w-3.5 h-3.5" />
                   </div>
                 )}
 
                 <div
-                  className={`max-w-[86%] p-3.5 rounded-2xl text-xs space-y-2.5 leading-relaxed shadow-sm ${
+                  className={`max-w-[85%] rounded-2xl p-3.5 text-xs space-y-2 shadow-sm ${
                     m.sender === "user"
-                      ? "bg-brand-600 text-white rounded-tr-none font-medium"
-                      : "bg-white text-slate-800 border border-slate-200/90 rounded-tl-none font-normal"
+                      ? "bg-brand-600 text-white rounded-tr-none"
+                      : "bg-white text-slate-800 border border-slate-200/90 rounded-tl-none"
                   }`}
                 >
-                  <div className="leading-relaxed whitespace-pre-line space-y-1">{m.text}</div>
+                  {/* Photo thumbnail if uploaded */}
+                  {m.imageThumbnail && (
+                    <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm max-w-[200px]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={m.imageThumbnail}
+                        alt="Defect Preview"
+                        className="w-full h-28 object-cover"
+                      />
+                    </div>
+                  )}
 
-                  {/* Diagnostic Points Checklist */}
-                  {m.diagnosticPoints && m.diagnosticPoints.length > 0 && (
-                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-1 text-[11px] text-slate-700">
-                      <span className="font-bold text-slate-900 block text-[10px] uppercase tracking-wider">
-                        Diagnostic Assessment:
-                      </span>
-                      {m.diagnosticPoints.map((pt, idx) => (
-                        <div key={idx} className="flex items-start gap-1.5">
-                          <CheckCircle2 className="w-3 h-3 text-brand-600 shrink-0 mt-0.5" />
-                          <span>{pt}</span>
+                  <p className="leading-relaxed whitespace-pre-line">{m.text}</p>
+
+                  {/* AI Visual Diagnosis Card if available */}
+                  {m.visualDiagnosis && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-slate-700">
+                      <div className="flex items-center justify-between text-[11px] font-bold border-b border-slate-200/80 pb-2">
+                        <span className="text-slate-900">{m.visualDiagnosis.category}</span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
+                            m.visualDiagnosis.severity === "EMERGENCY" || m.visualDiagnosis.severity === "HIGH"
+                              ? "bg-rose-100 text-rose-700"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {m.visualDiagnosis.severity} SEVERITY
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-slate-500">AI Confidence:</span>
+                          <span className="font-bold text-cyan-700">{m.visualDiagnosis.confidence}% Match</span>
                         </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Safety Tip Alert */}
-                  {m.safetyTip && (
-                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-2 text-[11px]">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="block text-[10px] uppercase font-bold text-amber-800">
-                          Safety Advice:
-                        </strong>
-                        <span>{m.safetyTip}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Recommended Service & Pro Card */}
-                  {m.recommendedService && (
-                    <div className="p-3 rounded-xl bg-brand-50/60 border border-brand-100 flex items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] font-bold text-brand-700 uppercase">
-                          Recommended Match
-                        </span>
-                        <h5 className="font-bold text-slate-900 text-xs">
-                          {m.recommendedService.name}
-                        </h5>
-                        {m.recommendedPro && (
-                          <p className="text-[10px] text-slate-500">
-                            Pro: {m.recommendedPro.name} • {m.recommendedPro.role}
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="font-black text-slate-900 text-sm block">
-                          ₹{m.recommendedService.price}
-                        </span>
-                        {m.recommendedService.duration && (
-                          <span className="text-[10px] text-slate-500">
-                            {m.recommendedService.duration}
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-slate-500">Estimated Upfront Cost:</span>
+                          <span className="font-black text-slate-900">
+                            ₹{m.visualDiagnosis.estimatedCost.min} - ₹{m.visualDiagnosis.estimatedCost.max}
                           </span>
-                        )}
+                        </div>
+                      </div>
+
+                      {m.visualDiagnosis.actionableTip && (
+                        <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-[10px] text-amber-900 space-y-0.5">
+                          <span className="font-bold flex items-center gap-1 text-amber-700">
+                            <AlertTriangle className="w-3 h-3" /> Urgent First-Aid Tip:
+                          </span>
+                          <p>{m.visualDiagnosis.actionableTip}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Diagnostic Points */}
+                  {m.diagnosticPoints && m.diagnosticPoints.length > 0 && (
+                    <ul className="space-y-1 text-[11px] list-disc pl-4 text-slate-600">
+                      {m.diagnosticPoints.map((pt, i) => (
+                        <li key={i}>{pt}</li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* Safety Tip */}
+                  {m.safetyTip && !m.visualDiagnosis && (
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] flex gap-2 items-start">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">Safety Note:</span> {m.safetyTip}
                       </div>
                     </div>
                   )}
 
-                  {/* Action CTA Button */}
+                  {/* Recommended Service Action Button */}
                   {m.action && (
-                    <div className="pt-0.5">
+                    <div className="pt-2">
                       <button
                         onClick={() => {
                           setIsOpen(false);
@@ -381,6 +619,7 @@ export default function HomeBuddyWidget() {
                         }}
                         className="w-full px-3 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-brand-500/25 transition-transform active:scale-95"
                       >
+                        <Wrench className="w-3.5 h-3.5" />
                         <span>{m.action.label}</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </button>
@@ -396,12 +635,14 @@ export default function HomeBuddyWidget() {
               </div>
             ))}
 
-            {isTyping && (
+            {(isTyping || isDiagnosing) && (
               <div className="flex items-center gap-2 text-xs text-slate-500 bg-white p-2.5 rounded-xl border border-slate-200 w-fit animate-in fade-in">
                 <span className="w-2 h-2 rounded-full bg-brand-500 animate-bounce" />
                 <span className="w-2 h-2 rounded-full bg-brand-500 animate-bounce delay-100" />
                 <span className="w-2 h-2 rounded-full bg-brand-500 animate-bounce delay-200" />
-                <span className="ml-1 text-[11px] font-medium">Analyzing symptoms...</span>
+                <span className="ml-1 text-[11px] font-medium">
+                  {isDiagnosing ? "Vision AI analyzing defect symptoms..." : "Home Buddy is analyzing..."}
+                </span>
               </div>
             )}
 
@@ -409,14 +650,19 @@ export default function HomeBuddyWidget() {
           </div>
 
           {/* Quick Prompts Carousel */}
-          <div className="p-2 bg-white border-t border-slate-100 overflow-x-auto flex gap-1.5 text-[11px] no-scrollbar">
+          <div className="p-2 bg-white border-t border-slate-100 overflow-x-auto flex gap-1.5 text-[11px] no-scrollbar shrink-0">
+            <button
+              onClick={() => setShowPhotoDiagnosis(true)}
+              className="px-2.5 py-1 rounded-full bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-[10px] font-bold flex items-center gap-1 shrink-0"
+            >
+              <Camera className="w-3 h-3 text-cyan-600" />
+              <span>📸 Diagnose from Photo</span>
+            </button>
             {[
-              "Poor working washing machine",
-              "How to save on electricity bill",
               "Water leaking under sink",
-              "How to book a service?",
-              "How to remove hard water stains",
-              "Main power MCB keeps tripping",
+              "Main power MCB trips",
+              "AC not cooling / freezing",
+              "How to book a verified pro?",
               "What is HOME+ membership?",
             ].map((qp, idx) => (
               <button
@@ -430,13 +676,22 @@ export default function HomeBuddyWidget() {
           </div>
 
           {/* Message Input Footer */}
-          <form onSubmit={(e) => handleSend(e)} className="p-3 bg-white border-t border-slate-200 flex gap-2">
+          <form onSubmit={(e) => handleSend(e)} className="p-3 bg-white border-t border-slate-200 flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowPhotoDiagnosis(!showPhotoDiagnosis)}
+              className="p-2.5 rounded-xl bg-slate-100 hover:bg-cyan-50 text-slate-600 hover:text-cyan-700 transition-colors border border-slate-200 shrink-0"
+              title="Upload photo for AI Diagnosis"
+            >
+              <Camera className="w-4 h-4" />
+            </button>
+
             <input
               type="text"
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
-              placeholder="Describe what is happening at home..."
-              className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              placeholder="Describe issue or click 📸 to diagnose..."
+              className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
             <button
               type="submit"

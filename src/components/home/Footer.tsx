@@ -64,20 +64,20 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Company */}
+          {/* Company & About Us */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-4">
               Company
             </h4>
             <ul className="space-y-2.5">
               <li>
-                <Link href="/support" className="hover:text-white transition-colors block">
+                <Link href="/support" className="hover:text-white transition-colors block font-semibold text-slate-200">
                   About Us
                 </Link>
               </li>
               <li>
                 <Link href="/support" className="hover:text-white transition-colors block">
-                  Careers (We're Hiring)
+                  Careers (We&apos;re Hiring)
                 </Link>
               </li>
               <li>
@@ -96,6 +96,30 @@ export default function Footer() {
                 </Link>
               </li>
             </ul>
+
+            {/* Download Option Near About Us */}
+            <div className="mt-5 pt-4 border-t border-slate-800/80 space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 block">
+                Get Mobile App
+              </span>
+              <a
+                href="/CoopServe.apk"
+                download="CoopServe.apk"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-bold text-[11px] transition-all group"
+              >
+                <Download className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+                <span>Download .APK</span>
+              </a>
+              <div>
+                <Link
+                  href="/download/app"
+                  className="text-[10px] text-slate-400 hover:text-cyan-300 transition-colors inline-flex items-center gap-1"
+                >
+                  <Smartphone className="w-3 h-3 text-slate-500" />
+                  <span>Scan QR / PWA Guide →</span>
+                </Link>
+              </div>
+            </div>
           </div>
 
           {/* Services & Support */}

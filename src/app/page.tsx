@@ -190,11 +190,11 @@ export default function HomePage() {
         {/* 14. Trust & safety */}
         <TrustAndSafety />
 
-        {/* 15. Download app */}
-        <DownloadAppBanner />
-
-        {/* 16. FAQ */}
+        {/* 15. FAQ */}
         <FAQAccordion />
+
+        {/* 16. Download app (Bottom of page, near About Us & Footer) */}
+        <DownloadAppBanner />
       </main>
 
       {/* Footer */}
