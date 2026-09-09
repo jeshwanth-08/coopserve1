@@ -17,6 +17,12 @@ import {
   Phone,
   AlertCircle,
   Award,
+  Search,
+  RefreshCw,
+  Check,
+  LogIn,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { POPULAR_SERVICES, ServiceItem, ProProfile } from "@/lib/homeData";
 
@@ -28,6 +34,18 @@ interface QuickBookingModalProps {
   selectedCity: string;
   selectedLocality: string;
 }
+
+const SERVICE_CATEGORY_TABS = [
+  { id: "ALL", label: "All Services" },
+  { id: "Electrical", label: "⚡ Electrical" },
+  { id: "Plumbing", label: "🔧 Plumbing" },
+  { id: "HVAC & AC", label: "❄️ AC & Appliances" },
+  { id: "Cleaning", label: "✨ Cleaning" },
+  { id: "Carpentry", label: "🔨 Carpentry" },
+  { id: "Painting", label: "🎨 Painting" },
+  { id: "Pest Control", label: "🛡️ Pest Control" },
+  { id: "Beauty", label: "💇 Beauty & Salon" },
+];
 
 export default function QuickBookingModal({
   isOpen,
@@ -42,6 +60,10 @@ export default function QuickBookingModal({
   const [selectedService, setSelectedService] = useState<ServiceItem>(
     initialService || POPULAR_SERVICES[0]
   );
+  const [isSelectingService, setIsSelectingService] = useState<boolean>(!initialService);
+  const [selectedCategoryTab, setSelectedCategoryTab] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
   const [selectedPro, setSelectedPro] = useState<ProProfile | null>(initialPro || null);
   const [dateOption, setDateOption] = useState<"today" | "tomorrow" | "dayAfter">("today");
   const [timeSlot, setTimeSlot] = useState<string>("10:00 AM - 12:00 PM");
@@ -76,8 +98,11 @@ export default function QuickBookingModal({
   useEffect(() => {
     if (initialService) {
       setSelectedService(initialService);
+      setIsSelectingService(false);
+    } else {
+      setIsSelectingService(true);
     }
-  }, [initialService]);
+  }, [initialService, isOpen]);
 
   useEffect(() => {
     setSelectedPro(initialPro || null);
@@ -91,8 +116,29 @@ export default function QuickBookingModal({
 
   if (!isOpen) return null;
 
+  // Filter available services
+  const filteredServices = POPULAR_SERVICES.filter((service) => {
+    const matchesTab =
+      selectedCategoryTab === "ALL" ||
+      service.category.toLowerCase().includes(selectedCategoryTab.toLowerCase()) ||
+      service.categorySlug.toLowerCase().includes(selectedCategoryTab.toLowerCase());
+
+    const matchesSearch =
+      !searchQuery.trim() ||
+      service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesTab && matchesSearch;
+  });
+
+  const handleSelectServiceFromList = (service: ServiceItem) => {
+    setSelectedService(service);
+    setIsSelectingService(false);
+  };
+
   const handleConfirmBooking = async () => {
-    // Unauthenticated booking is invalid: direct to sign in page with choice of interest
+    // Unauthenticated booking is invalid: direct to sign in page
     if (!currentUser) {
       const proParam = selectedPro ? `?pro=${encodeURIComponent(selectedPro.name)}` : "";
       const targetUrl = `/book/${selectedService.id}${proParam}`;
@@ -103,11 +149,9 @@ export default function QuickBookingModal({
 
     setIsSubmitting(true);
     try {
-      // Simulate booking creation or make direct API call
       const generatedId = "BK-" + Math.floor(100000 + Math.random() * 900000);
       setBookingId(generatedId);
-      
-      // Also post to backend if member session exists or anonymous booking
+
       try {
         await fetch("/api/requests", {
           method: "POST",
@@ -164,7 +208,9 @@ export default function QuickBookingModal({
                 {isConfirmed ? "Booking Confirmed!" : "Book Trusted Home Professional"}
               </h3>
               <p className="text-xs text-slate-500">
-                {isConfirmed ? "A verified specialist is on standby" : "Fixed price • 30-Day warranty • 100% genuine"}
+                {isConfirmed
+                  ? "A verified specialist is on standby"
+                  : "Fixed price • 30-Day warranty • 100% genuine"}
               </p>
             </div>
           </div>
@@ -189,10 +235,11 @@ export default function QuickBookingModal({
                   Booking ID: {bookingId}
                 </span>
                 <h4 className="text-xl font-black text-slate-900 mt-3">
-                  You're all set! Service is scheduled.
+                  You&apos;re all set! Service is scheduled.
                 </h4>
                 <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-md mx-auto">
-                  We have assigned your booking to a 5-star verified specialist in <strong>{locality}, {selectedCity}</strong>. You'll receive SMS & WhatsApp updates.
+                  We have assigned your booking to a 5-star verified specialist in{" "}
+                  <strong>{locality}, {selectedCity}</strong>. You&apos;ll receive SMS &amp; WhatsApp updates.
                 </p>
               </div>
 
@@ -218,12 +265,19 @@ export default function QuickBookingModal({
                 <div className="flex justify-between">
                   <span className="text-slate-500">Slot:</span>
                   <span className="font-bold text-slate-800">
-                    {dateOption === "today" ? "Today" : dateOption === "tomorrow" ? "Tomorrow" : "Day After"}, {timeSlot}
+                    {dateOption === "today"
+                      ? "Today"
+                      : dateOption === "tomorrow"
+                      ? "Tomorrow"
+                      : "Day After"}
+                    , {timeSlot}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Address:</span>
-                  <span className="font-bold text-slate-800">{address}, {locality}</span>
+                  <span className="font-bold text-slate-800">
+                    {address}, {locality}
+                  </span>
                 </div>
                 <div className="flex justify-between border-t border-slate-200 pt-2 text-sm">
                   <span className="font-bold text-slate-700">Total (Pay After Service):</span>
@@ -236,13 +290,26 @@ export default function QuickBookingModal({
                   onClick={handleReset}
                   className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/20 transition-all"
                 >
-                  Done & View Dashboard
+                  Done &amp; View Dashboard
                 </button>
               </div>
             </div>
           ) : (
             /* Booking Form */
             <div className="space-y-4">
+              {/* Guest / Unauthenticated Notice Banner */}
+              {!currentUser && (
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-amber-900 text-xs">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <p className="font-bold">Sign-in Required to Complete Booking</p>
+                    <p className="text-[11px] text-amber-800 leading-normal">
+                      You are currently browsing as guest. Please sign in to verify your contact number and reserve verified professionals.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Selected Specialist Profile & Designation Card */}
               {selectedPro && (
                 <div className="p-4 rounded-2xl bg-gradient-to-r from-brand-50 via-indigo-50/50 to-brand-50/40 border border-brand-200 shadow-sm space-y-2.5 animate-in fade-in">
@@ -275,7 +342,6 @@ export default function QuickBookingModal({
                           {selectedPro.rating}
                         </span>
                       </div>
-                      {/* Prominent Designation / Title of the person */}
                       <p className="text-xs font-bold text-brand-700 leading-tight mt-0.5">
                         {selectedPro.role}
                       </p>
@@ -294,35 +360,153 @@ export default function QuickBookingModal({
                 </div>
               )}
 
-              {/* Selected Service Card */}
-              <div className="p-3.5 rounded-2xl bg-brand-50/50 border border-brand-100 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={selectedService.image}
-                    alt={selectedService.name}
-                    className="w-12 h-12 rounded-xl object-cover"
-                  />
-                  <div>
-                    <span className="text-[10px] font-bold text-brand-700 uppercase tracking-wider">
-                      {selectedService.category}
-                    </span>
-                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
-                      {selectedService.name}
-                    </h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Duration: {selectedService.duration} • 30-Day Guarantee
-                    </p>
+              {/* Service Selection Interface: Various Options */}
+              {isSelectingService ? (
+                /* EXPANDED SERVICE SELECTOR */
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Choose a Service Option
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Select from 20 standard verified home services
+                      </p>
+                    </div>
+                    {selectedService && (
+                      <button
+                        type="button"
+                        onClick={() => setIsSelectingService(false)}
+                        className="text-[11px] font-bold text-brand-600 hover:text-brand-700 underline"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search (e.g. Plumber, AC Jet, Deep Clean, Painting...)"
+                      className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  {/* Category Filter Pills */}
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
+                    {SERVICE_CATEGORY_TABS.map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setSelectedCategoryTab(tab.id)}
+                        className={`px-2.5 py-1 rounded-lg font-semibold whitespace-nowrap transition-all ${
+                          selectedCategoryTab === tab.id
+                            ? "bg-brand-600 text-white shadow-xs"
+                            : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Service Items Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                    {filteredServices.map((svc) => {
+                      const isSelected = selectedService?.id === svc.id;
+                      return (
+                        <div
+                          key={svc.id}
+                          onClick={() => handleSelectServiceFromList(svc)}
+                          className={`p-2.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-2.5 ${
+                            isSelected
+                              ? "bg-brand-50/80 border-brand-500 shadow-xs"
+                              : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/80"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <img
+                              src={svc.image}
+                              alt={svc.name}
+                              className="w-10 h-10 rounded-lg object-cover shrink-0 border border-slate-100"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-900 truncate">
+                                {svc.name}
+                              </p>
+                              <span className="text-[10px] text-slate-400 block truncate">
+                                {svc.category} • {svc.duration}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-xs font-black text-slate-900 block">
+                              ₹{svc.price}
+                            </span>
+                            {isSelected && (
+                              <span className="inline-flex items-center text-[10px] font-bold text-brand-600">
+                                <Check className="w-3 h-3 mr-0.5" /> Selected
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {filteredServices.length === 0 && (
+                      <div className="col-span-2 text-center py-6 text-slate-400 text-xs">
+                        No service matching &ldquo;{searchQuery}&rdquo;. Try another term.
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="text-sm sm:text-base font-black text-slate-900 block">
-                    ₹{selectedService.price}
-                  </span>
-                  <span className="text-[10px] text-slate-400 line-through">
-                    ₹{selectedService.originalPrice}
-                  </span>
+              ) : (
+                /* COMPACT SELECTED SERVICE CARD WITH SWITCH BUTTON */
+                <div className="p-3.5 rounded-2xl bg-brand-50/50 border border-brand-100 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={selectedService.image}
+                      alt={selectedService.name}
+                      className="w-12 h-12 rounded-xl object-cover shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold text-brand-700 uppercase tracking-wider block truncate">
+                        {selectedService.category}
+                      </span>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight truncate">
+                        {selectedService.name}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                        Duration: {selectedService.duration} • 30-Day Guarantee
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                    <div>
+                      <span className="text-sm sm:text-base font-black text-slate-900 block">
+                        ₹{selectedService.price}
+                      </span>
+                      <span className="text-[10px] text-slate-400 line-through block">
+                        ₹{selectedService.originalPrice}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsSelectingService(true)}
+                      className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 flex items-center gap-1 shadow-xs transition-colors"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Change Service</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Emergency ASAP Dispatch Toggle */}
               <div
@@ -346,7 +530,7 @@ export default function QuickBookingModal({
                       ⚡ Need Urgent Emergency Dispatch (Arrives in 45 Mins)
                     </span>
                     <span className="text-[10px] text-slate-500">
-                      High priority routing for water leaks, power trips & lockouts
+                      High priority routing for water leaks, power trips &amp; lockouts
                     </span>
                   </div>
                 </div>
@@ -418,7 +602,7 @@ export default function QuickBookingModal({
                 <div>
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1.5 flex items-center gap-1">
                     <MapPin className="w-3 h-3 text-brand-600" />
-                    <span>Door / Flat & Building</span>
+                    <span>Door / Flat &amp; Building</span>
                   </label>
                   <input
                     type="text"
@@ -461,7 +645,7 @@ export default function QuickBookingModal({
                 <div>
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1.5 flex items-center gap-1">
                     <Phone className="w-3 h-3 text-brand-600" />
-                    <span>Phone (For OTP & Updates)</span>
+                    <span>Phone (For OTP &amp; Updates)</span>
                   </label>
                   <input
                     type="text"
@@ -476,7 +660,7 @@ export default function QuickBookingModal({
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2.5 text-xs text-emerald-800">
                 <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
                 <span className="leading-tight">
-                  <strong>₹0 Visit Fee & Pay After Service.</strong> Covered by ₹10,000 CoopServe damage protection & 30-day warranty.
+                  <strong>₹0 Visit Fee &amp; Pay After Service.</strong> Covered by ₹10,000 CoopServe damage protection &amp; 30-day warranty.
                 </span>
               </div>
             </div>
@@ -494,23 +678,41 @@ export default function QuickBookingModal({
               </div>
             </div>
 
-            <button
-              onClick={handleConfirmBooking}
-              disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-bold text-xs shadow-md shadow-brand-500/25 transition-all flex items-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Reserving Specialist...</span>
-                </>
-              ) : (
-                <>
-                  <span>Confirm Slot</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
+            {!currentUser ? (
+              /* Unauthenticated user: direct to sign in page */
+              <button
+                onClick={() => {
+                  const proParam = selectedPro ? `?pro=${encodeURIComponent(selectedPro.name)}` : "";
+                  const targetUrl = `/book/${selectedService.id}${proParam}`;
+                  onClose();
+                  router.push(`/login?returnUrl=${encodeURIComponent(targetUrl)}`);
+                }}
+                className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-bold text-xs shadow-md shadow-brand-500/25 transition-all flex items-center gap-2"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Sign In to Book Service</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              /* Authenticated user: confirm booking */
+              <button
+                onClick={handleConfirmBooking}
+                disabled={isSubmitting}
+                className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-bold text-xs shadow-md shadow-brand-500/25 transition-all flex items-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Reserving Specialist...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Confirm Slot</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
       </div>

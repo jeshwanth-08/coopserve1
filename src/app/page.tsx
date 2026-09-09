@@ -32,9 +32,7 @@ export default function HomePage() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any | null>(null);
-  const [activeServiceForBooking, setActiveServiceForBooking] = useState<ServiceItem | null>(
-    POPULAR_SERVICES[0]
-  );
+  const [activeServiceForBooking, setActiveServiceForBooking] = useState<ServiceItem | null>(null);
   const [selectedProForBooking, setSelectedProForBooking] = useState<ProProfile | null>(null);
 
   useEffect(() => {
@@ -69,9 +67,10 @@ export default function HomePage() {
   const handleOpenBookingWithService = (service?: ServiceItem, pro?: ProProfile) => {
     // If not signed in, redirect to login and preserve the choice of interest
     if (!currentUser) {
-      const targetService = service || (pro ? getMatchingServiceForPro(pro) : POPULAR_SERVICES[0]);
-      const proParam = pro ? `?pro=${encodeURIComponent(pro.name)}` : "";
-      const targetUrl = `/book/${targetService.id}${proParam}`;
+      const targetService = service || (pro ? getMatchingServiceForPro(pro) : null);
+      const targetUrl = targetService
+        ? `/book/${targetService.id}${pro ? `?pro=${encodeURIComponent(pro.name)}` : ""}`
+        : "/services";
       router.push(`/login?returnUrl=${encodeURIComponent(targetUrl)}`);
       return;
     }
@@ -85,7 +84,7 @@ export default function HomePage() {
       setActiveServiceForBooking(service);
     } else {
       setSelectedProForBooking(null);
-      setActiveServiceForBooking(POPULAR_SERVICES[0]);
+      setActiveServiceForBooking(null);
     }
     setIsBookingOpen(true);
   };

@@ -343,6 +343,15 @@ export default function Navbar({
               <div className="hidden sm:flex items-center gap-1.5 shrink-0">
                 {sessionUser ? (
                   <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => onOpenBooking()}
+                      type="button"
+                      className="h-10 px-3.5 text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-xl border border-brand-200 transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-brand-600" />
+                      <span>Book a Service</span>
+                    </button>
+
                     <Link
                       href={
                         sessionUser.role === "ADMIN"
@@ -386,7 +395,9 @@ export default function Navbar({
                       Sign In
                     </Link>
                     <button
-                      onClick={() => onOpenBooking()}
+                      onClick={() => {
+                        router.push("/login?returnUrl=/services");
+                      }}
                       type="button"
                       className="h-10 px-3.5 sm:px-4 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 active:bg-brand-800 rounded-xl shadow-md shadow-brand-500/25 hover:shadow-brand-500/40 transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98] whitespace-nowrap"
                     >

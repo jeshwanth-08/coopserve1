@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import {
@@ -67,7 +67,6 @@ export default function CategoriesGrid({ onSelectCategory, onOpenBooking }: Cate
                 key={cat.id}
                 onClick={() => {
                   onSelectCategory(cat, matchedService);
-                  onOpenBooking(matchedService);
                 }}
                 className="bg-white rounded-3xl border border-slate-200 hover:border-brand-300 hover:shadow-card-hover p-4 sm:p-5 flex flex-col justify-between cursor-pointer transition-all duration-300 group card-hover-effect relative overflow-hidden"
               >
