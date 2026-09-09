@@ -41,9 +41,19 @@ import {
   ArrowRightLeft,
   Thermometer,
   CloudRain,
+  ArrowRight,
 } from "lucide-react";
 import ServiceLocationMap, { COOP_SOCIETY_LOCATIONS } from "@/components/maps/ServiceLocationMap";
-import { getAllInsuranceClaims, updateClaimStatus, InsuranceClaim } from "@/lib/welfareService";
+import {
+  getAllInsuranceClaims,
+  updateClaimStatus,
+  InsuranceClaim,
+  getAllAssistanceRequests,
+  updateAssistanceStatus,
+  WelfareAssistanceRequest,
+  INITIAL_AI_ALERTS,
+  DEFAULT_INSURANCE_POLICIES,
+} from "@/lib/welfareService";
 import {
   BASE_LOCALITY_DATA,
   INITIAL_REALLOCATIONS,
@@ -102,8 +112,10 @@ function AdminDashboardContent() {
     }
   };
 
-  // Welfare Claims State
+  // Welfare Claims & Assistance State
   const [claims, setClaims] = useState<InsuranceClaim[]>([]);
+  const [assistanceRequests, setAssistanceRequests] = useState<WelfareAssistanceRequest[]>([]);
+  const [aiAlerts, setAiAlerts] = useState(INITIAL_AI_ALERTS);
 
   // Forecasting State
   const [temperature, setTemperature] = useState(36);
@@ -117,6 +129,7 @@ function AdminDashboardContent() {
     setJobsBookings(getAdminBookings());
     setCoupons(getAdminCoupons());
     setClaims(getAllInsuranceClaims());
+    setAssistanceRequests(getAllAssistanceRequests());
     fetchPools();
   }, []);
 
@@ -128,6 +141,16 @@ function AdminDashboardContent() {
   const handleDisburseClaim = (claimId: string) => {
     const updated = updateClaimStatus(claimId, "DISBURSED", undefined, "Settled via Instant UPI Direct Benefit Transfer");
     setClaims(updated);
+  };
+
+  const handleApproveAssistance = (reqId: string) => {
+    const updated = updateAssistanceStatus(reqId, "APPROVED", undefined, "Approved by Cooperative District Board");
+    setAssistanceRequests(updated);
+  };
+
+  const handleDisburseAssistance = (reqId: string) => {
+    const updated = updateAssistanceStatus(reqId, "DISBURSED", undefined, "Disbursed via DBT UPI Payment");
+    setAssistanceRequests(updated);
   };
 
   const handleExecuteReallocation = () => {
@@ -1522,23 +1545,23 @@ function AdminDashboardContent() {
         </div>
       )}
 
-      {/* 11. WORKER WELFARE & SOCIAL SECURITY (e-SHRAM & CLAIMS) */}
+      {/* 11. WORKER WELFARE & SOCIAL SECURITY (e-SHRAM, CLAIMS & AI RISK GUARDIAN) */}
       {activeTab === "welfare" && (
         <div className="space-y-6 animate-in fade-in">
-          {/* Header */}
+          {/* Header Banner */}
           <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
             <div className="absolute right-0 top-0 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="space-y-2">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-400/20 text-emerald-200 text-xs font-bold border border-emerald-300/30">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>SIH 2026 Core Cooperative Pillar</span>
+                  <span>SIH 2026 Core Cooperative Pillar &bull; Worker Welfare &amp; Insurance</span>
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
-                  Worker Welfare, e-Shram & Social Security
+                  Worker Welfare, e-Shram &amp; Social Security Administration
                 </h2>
                 <p className="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
-                  National e-Shram database integration, autonomous 5% Welfare Fund escrow, and on-duty micro-insurance claim settlements via Direct Benefit Transfer (DBT).
+                  2% Cooperative Welfare Fund governance, e-Shram UAN compliance, 4-tier micro-insurance claims, child scholarships, and AI risk monitoring.
                 </p>
               </div>
 
@@ -1557,37 +1580,179 @@ function AdminDashboardContent() {
             {/* Metrics Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/10">
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                <span className="text-[11px] text-emerald-200 font-medium">Cooperative Welfare Fund</span>
+                <span className="text-[11px] text-emerald-200 font-medium">Cooperative Welfare Fund (2%)</span>
                 <div className="text-2xl font-black text-white mt-1">₹1,84,500</div>
-                <span className="text-[10px] text-emerald-400 font-semibold">5% contribution on 2,340 jobs</span>
+                <span className="text-[10px] text-emerald-400 font-semibold">Accumulated from 2,340 completed jobs</span>
               </div>
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                <span className="text-[11px] text-emerald-200 font-medium">e-Shram UAN Verified</span>
+                <span className="text-[11px] text-emerald-200 font-medium">e-Shram National Compliance</span>
                 <div className="text-2xl font-black text-white mt-1">86 / 88</div>
-                <span className="text-[10px] text-emerald-400 font-semibold">97.7% national compliance</span>
+                <span className="text-[10px] text-emerald-400 font-semibold">97.7% verified UAN registry</span>
               </div>
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                <span className="text-[11px] text-emerald-200 font-medium">Group Accidental Cover</span>
-                <div className="text-2xl font-black text-white mt-1">₹5,00,000</div>
-                <span className="text-[10px] text-slate-300">Active policy for all active pros</span>
+                <span className="text-[11px] text-emerald-200 font-medium">Active Policy Cover</span>
+                <div className="text-2xl font-black text-white mt-1">4 Policies</div>
+                <span className="text-[10px] text-slate-300">Accident, Life, Health &amp; Third-Party</span>
               </div>
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                <span className="text-[11px] text-emerald-200 font-medium">Claims Settled (DBT)</span>
+                <span className="text-[11px] text-emerald-200 font-medium">Claims &amp; Grants Settled</span>
                 <div className="text-2xl font-black text-white mt-1">
-                  {claims.filter((c) => c.status === "DISBURSED").length} / {claims.length}
+                  {claims.filter((c) => c.status === "DISBURSED").length + assistanceRequests.filter((r) => r.status === "DISBURSED").length} Settled
                 </div>
-                <span className="text-[10px] text-emerald-400 font-semibold">Avg 4-hour settlement</span>
+                <span className="text-[10px] text-emerald-400 font-semibold">Instant DBT UPI settlement</span>
               </div>
             </div>
           </div>
 
-          {/* Claims Table */}
+          {/* 🤖 SIH AI FEATURE: AI WORKER RISK & SAFETY GUARDIAN */}
+          <div className="bg-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-lg space-y-4 border border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-400 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black tracking-tight flex items-center gap-2">
+                    <span>AI Sentinel: Predictive Worker Risk &amp; Safety Intelligence</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-400/20 text-indigo-300 font-bold">
+                      SIH AI Engine
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Identifies workers at risk: low income for 3 months, frequent injury patterns, and regional skill shortages.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[11px] text-emerald-400 font-mono bg-white/5 px-2.5 py-1 rounded-full">
+                ✓ Automated Action Engine Active
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {aiAlerts.map((riskAlert) => (
+                <div key={riskAlert.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
+                        {riskAlert.type.replace("_", " ")}
+                      </span>
+                      <span className="text-slate-400 text-[10px]">Marcus Thorne</span>
+                    </div>
+                    <h4 className="text-xs font-bold text-white">{riskAlert.title}</h4>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">{riskAlert.description}</p>
+                    <div className="p-2 bg-indigo-950/60 rounded-xl border border-indigo-500/20 text-[11px] text-indigo-200">
+                      <strong>AI Suggestion:</strong> {riskAlert.aiRecommendation}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        window.alert(`Federation Action Executed: ${riskAlert.actionLabel} for Marcus Thorne`);
+                      }
+                    }}
+                    className="w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <span>Execute: {riskAlert.actionLabel}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 🌟 SECTION 2: EMERGENCY WELFARE & CHILD SCHOLARSHIP REQUESTS */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-black text-slate-900">Worker Welfare & Micro-Insurance Claims</h3>
+                <h3 className="text-lg font-black text-slate-900">Cooperative Welfare Fund &amp; Scholarship Approvals</h3>
                 <p className="text-xs text-slate-500">
-                  Review on-duty incident reports, cashless hospital admission authorizations, and disburse relief funds.
+                  Review applications for medical assistance, child education (Vidya Nidhi), and emergency tool repairs funded by the 2% Welfare Fund.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                {assistanceRequests.length} Welfare Grants
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100 uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="py-3 px-4">Request ID &amp; Worker</th>
+                    <th className="py-3 px-3">Grant Category</th>
+                    <th className="py-3 px-3">Beneficiary Details</th>
+                    <th className="py-3 px-3">Purpose &amp; Reason</th>
+                    <th className="py-3 px-3">Amount</th>
+                    <th className="py-3 px-3">Status</th>
+                    <th className="py-3 px-4 text-right">Committee Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {assistanceRequests.map((req) => (
+                    <tr key={req.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-slate-900">{req.workerName}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">#{req.id} &bull; {req.submittedAt}</div>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className="font-bold text-slate-800 text-[11px] uppercase">
+                          {req.category.replace("_", " ")}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3 text-slate-700 font-semibold">{req.beneficiaryDetails}</td>
+                      <td className="py-3.5 px-3 max-w-xs text-slate-600 truncate">{req.reason}</td>
+                      <td className="py-3.5 px-3 font-black text-slate-900 text-sm">₹{req.amountRequested.toLocaleString("en-IN")}</td>
+                      <td className="py-3.5 px-3">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                            req.status === "DISBURSED"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : req.status === "APPROVED"
+                              ? "bg-blue-50 text-blue-700 border border-blue-200"
+                              : "bg-amber-50 text-amber-700 border border-amber-200"
+                          }`}
+                        >
+                          {req.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right space-x-2">
+                        {req.status === "PENDING" && (
+                          <button
+                            onClick={() => handleApproveAssistance(req.id)}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700"
+                          >
+                            Approve Grant
+                          </button>
+                        )}
+                        {req.status === "APPROVED" && (
+                          <button
+                            onClick={() => handleDisburseAssistance(req.id)}
+                            className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold text-[11px] hover:bg-indigo-700"
+                          >
+                            Disburse via UPI
+                          </button>
+                        )}
+                        {req.status === "DISBURSED" && (
+                          <span className="text-[11px] text-emerald-700 font-bold flex items-center justify-end gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Disbursed
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 🛡️ SECTION 3: INSURANCE CLAIMS & PAYOUTS */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Cooperative Micro-Insurance Claims Register</h3>
+                <p className="text-xs text-slate-500">
+                  On-duty accidental injury, hospital bill reimbursements, and third-party customer property compensation claims.
                 </p>
               </div>
               <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
@@ -1599,9 +1764,9 @@ function AdminDashboardContent() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100 uppercase tracking-wider text-[10px]">
                   <tr>
-                    <th className="py-3 px-4">Claim ID & Worker</th>
-                    <th className="py-3 px-3">e-Shram UAN</th>
-                    <th className="py-3 px-3">Incident & Category</th>
+                    <th className="py-3 px-4">Claim ID &amp; Worker</th>
+                    <th className="py-3 px-3">Policy Type</th>
+                    <th className="py-3 px-3">Incident Description</th>
                     <th className="py-3 px-3">Claim Amount</th>
                     <th className="py-3 px-3">Status</th>
                     <th className="py-3 px-4 text-right">Federation Action</th>
@@ -1612,14 +1777,20 @@ function AdminDashboardContent() {
                     <tr key={claim.id} className="hover:bg-slate-50/60 transition-colors">
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-slate-900">{claim.providerName}</div>
-                        <div className="text-[10px] text-slate-500 font-mono">#{claim.id} • {claim.trade}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">#{claim.id} &bull; {claim.trade}</div>
                       </td>
-                      <td className="py-3.5 px-3 font-mono text-slate-700">
-                        {claim.providerId}
+                      <td className="py-3.5 px-3">
+                        <span className="font-bold text-slate-800 uppercase text-[10px] bg-slate-100 px-2 py-0.5 rounded">
+                          {claim.insuranceType.replace("_", " ")}
+                        </span>
                       </td>
                       <td className="py-3.5 px-3 max-w-xs">
-                        <span className="font-semibold text-slate-900 capitalize">{claim.incidentType.toLowerCase().replace(/_/g, " ")}</span>
-                        <p className="text-[11px] text-slate-500 truncate">{claim.description}</p>
+                        <p className="text-[11px] text-slate-600 line-clamp-2">{claim.description}</p>
+                        {claim.customerAffected && (
+                          <span className="text-[10px] text-amber-700 font-semibold block mt-0.5">
+                            Affected: {claim.customerAffected}
+                          </span>
+                        )}
                       </td>
                       <td className="py-3.5 px-3">
                         <span className="font-black text-slate-900 text-sm">
@@ -1633,8 +1804,6 @@ function AdminDashboardContent() {
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               : claim.status === "APPROVED"
                               ? "bg-blue-50 text-blue-700 border border-blue-200"
-                              : claim.status === "REJECTED"
-                              ? "bg-rose-50 text-rose-700 border border-rose-200"
                               : "bg-amber-50 text-amber-700 border border-amber-200"
                           }`}
                         >
@@ -1645,7 +1814,7 @@ function AdminDashboardContent() {
                         {claim.status === "SUBMITTED" && (
                           <button
                             onClick={() => handleApproveClaim(claim.id)}
-                            className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700 transition-colors"
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700"
                           >
                             Approve
                           </button>
@@ -1653,7 +1822,7 @@ function AdminDashboardContent() {
                         {claim.status === "APPROVED" && (
                           <button
                             onClick={() => handleDisburseClaim(claim.id)}
-                            className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold text-[11px] hover:bg-indigo-700 transition-colors shadow-sm"
+                            className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold text-[11px] hover:bg-indigo-700 shadow-sm"
                           >
                             Disburse via DBT
                           </button>
@@ -1668,6 +1837,35 @@ function AdminDashboardContent() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          {/* 👥 SECTION 4: INSURED WORKERS REGISTER & POLICY COVERAGE */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Cooperative Member Insurance &amp; PF Register</h3>
+                <p className="text-xs text-slate-500">
+                  Verified roster of cooperative workers enrolled in PMSBY, PMJJBY, Ayushman Bharat, and Third-Party Protection.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+                100% Policy Active Rate
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {DEFAULT_INSURANCE_POLICIES.map((pol) => (
+                <div key={pol.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[10px] font-bold text-slate-400">{pol.policyNumber}</span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Active</span>
+                  </div>
+                  <h4 className="text-xs font-black text-slate-900">{pol.title}</h4>
+                  <div className="text-base font-black text-slate-900">₹{pol.coverageAmount.toLocaleString("en-IN")}</div>
+                  <p className="text-[10px] text-slate-500 leading-tight">{pol.description}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
