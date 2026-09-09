@@ -137,9 +137,8 @@ export default function Navbar({
                 />
               </Link>
 
-              {/* Location & Search Bar Cluster */}
-              <div className="hidden md:flex items-center gap-2 shrink-0">
-                {/* Location Selector */}
+              {/* Location Selector */}
+              <div className="hidden md:flex items-center shrink-0">
                 <button
                   onClick={() => setShowLocationModal(true)}
                   type="button"
@@ -150,34 +149,17 @@ export default function Navbar({
                   </div>
                   <div className="leading-tight">
                     <span className="text-slate-800 font-bold flex items-center gap-1 text-xs">
-                      <span className="truncate max-w-[100px] xl:max-w-[120px] inline-block">
+                      <span className="truncate max-w-[100px] xl:max-w-[140px] inline-block">
                         {selectedLocality}, {selectedCity}
                       </span>
                       <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
                     </span>
                   </div>
                 </button>
-
-                {/* Compact Search Bar */}
-                <button
-                  onClick={onOpenSearch}
-                  type="button"
-                  className="hidden lg:flex items-center justify-between h-9 w-40 xl:w-52 px-2.5 py-1.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-brand-300 text-slate-400 hover:text-slate-600 transition-all text-xs text-left shadow-sm group shrink-0"
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1 mr-1">
-                    <Search className="w-3.5 h-3.5 text-brand-600 shrink-0 group-hover:scale-105 transition-transform" />
-                    <span className="text-slate-500 truncate whitespace-nowrap text-xs">
-                      Search services...
-                    </span>
-                  </div>
-                  <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[9px] font-mono font-medium rounded bg-slate-100 text-slate-500 shrink-0 border border-slate-200">
-                    ⌘K
-                  </kbd>
-                </button>
               </div>
 
               {/* Primary Navigation Links starting from left */}
-              <nav className="hidden xl:flex items-center gap-1.5 shrink-0 ml-1">
+              <nav className="hidden lg:flex items-center gap-1.5 shrink-0 ml-1">
                 {/* Bundled Packages */}
                 <Link
                   href="/packages"
