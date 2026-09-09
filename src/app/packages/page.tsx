@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -58,7 +58,7 @@ export default function PackagesPage() {
           <div className="max-w-7xl mx-auto relative z-10 text-center">
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-black uppercase tracking-wider mb-4">
               <Package className="w-4 h-4" />
-              <span>Smart Bundles • Save Up to ?1,800</span>
+              <span>Smart Bundles • Save Up to ₹1,800</span>
             </div>
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white max-w-3xl mx-auto leading-tight">
               Curated Service Packages for Every Milestone
@@ -156,7 +156,7 @@ export default function PackagesPage() {
                             >
                               <PlusCircle className="w-3.5 h-3.5 text-brand-600" />
                               <span>{addon.name}</span>
-                              <span className="font-bold text-brand-600">+?{addon.price}</span>
+                              <span className="font-bold text-brand-600">+₹{addon.price}</span>
                             </span>
                           ))}
                         </div>
@@ -169,11 +169,11 @@ export default function PackagesPage() {
                 <div className="p-6 sm:p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                   <div>
                     <span className="text-xs font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full inline-block mb-1">
-                      Save ?{pkg.savings} instantly
+                      Save ₹{pkg.savings} instantly
                     </span>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-black text-slate-900">?{pkg.packagePrice}</span>
-                      <span className="text-sm text-slate-400 line-through">?{pkg.originalPrice}</span>
+                      <span className="text-3xl font-black text-slate-900">₹{pkg.packagePrice}</span>
+                      <span className="text-sm text-slate-400 line-through">₹{pkg.originalPrice}</span>
                     </div>
                   </div>
 

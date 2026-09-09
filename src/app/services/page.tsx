@@ -79,7 +79,7 @@ export default function ServicesDirectoryPage() {
                       <p className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
                         Starting from
                       </p>
-                      <p className="text-xl font-black">?{cat.startingPrice}</p>
+                      <p className="text-xl font-black">₹{cat.startingPrice}</p>
                     </div>
                   </div>
 
