@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -182,12 +182,12 @@ export default function MembershipPage() {
                   </h3>
 
                   <div className="pt-2 flex items-baseline gap-2">
-                    <span className="text-5xl font-black text-white">?999</span>
+                    <span className="text-5xl font-black text-white">₹999</span>
                     <span className="text-base text-slate-400">/year</span>
-                    <span className="text-xs text-amber-400 line-through">?2,499</span>
+                    <span className="text-xs text-amber-400 line-through">₹2,499</span>
                   </div>
                   <p className="text-xs text-slate-300">
-                    Just ?83/month. Pays for itself in your first 2 household bookings!
+                    Just ₹83/month. Pays for itself in your first 2 household bookings!
                   </p>
 
                   <div className="border-t border-white/10 pt-4 space-y-2.5 text-xs text-slate-200">
@@ -197,7 +197,7 @@ export default function MembershipPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>4 free inspection & diagnosis visits (?796 value)</span>
+                      <span>4 free inspection & diagnosis visits (₹796 value)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -234,7 +234,7 @@ export default function MembershipPage() {
                       </>
                     ) : (
                       <>
-                        <span>Join HOME+ for ?999/year</span>
+                        <span>Join HOME+ for ₹999/year</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
@@ -324,7 +324,7 @@ export default function MembershipPage() {
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
                   <div className="flex justify-between text-slate-600">
                     <span>1-Year HOME+ VIP Membership</span>
-                    <span className="font-bold text-slate-900">?999</span>
+                    <span className="font-bold text-slate-900">₹999</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>Applicable GST (18%)</span>
@@ -332,7 +332,7 @@ export default function MembershipPage() {
                   </div>
                   <div className="border-t border-slate-200 pt-2 flex justify-between font-black text-slate-900 text-sm">
                     <span>Total Payable</span>
-                    <span className="text-brand-600">?999</span>
+                    <span className="text-brand-600">₹999</span>
                   </div>
                 </div>
 
@@ -356,7 +356,7 @@ export default function MembershipPage() {
                     <span>Activating Your VIP Pass...</span>
                   ) : (
                     <>
-                      <span>Pay ?999 & Join HOME+</span>
+                      <span>Pay ₹999 & Join HOME+</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}

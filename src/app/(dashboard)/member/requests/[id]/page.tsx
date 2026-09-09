@@ -19,11 +19,13 @@ import {
   ShieldCheck,
   Send,
   Building,
+  Truck,
 } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import UrgencyBadge from "@/components/UrgencyBadge";
 import StatusTimeline from "@/components/StatusTimeline";
 import ReviewModal from "@/components/ReviewModal";
+import { subscribeToStatusUpdates } from "@/lib/realtimeSync";
 
 export default function MemberRequestDetailPage({
   params,
@@ -64,6 +66,38 @@ export default function MemberRequestDetailPage({
 
   useEffect(() => {
     fetchDetail();
+
+    // 1. Instant cross-tab real-time update listener
+    const unsubscribe = subscribeToStatusUpdates((event) => {
+      if (event.requestId === id) {
+        setRequest((prev: any) => (prev ? { ...prev, status: event.status } : prev));
+        fetchDetail();
+      }
+    });
+
+    // 2. Continuous multi-device polling heartbeat (every 3 seconds)
+    const pollInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        fetch(`/api/requests/${id}`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data?.request) {
+              setRequest((prev: any) => {
+                if (prev && prev.status !== data.request.status) {
+                  return data.request;
+                }
+                return prev || data.request;
+              });
+            }
+          })
+          .catch(() => {});
+      }
+    }, 3000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
   }, [id]);
 
   const handleCancel = async () => {
@@ -220,6 +254,51 @@ export default function MemberRequestDetailPage({
             </div>
           </div>
           <UrgencyBadge isEmergency={true} />
+        </div>
+      )}
+
+      {/* Realtime Live Tracking Banner when Provider is On The Way */}
+      {request.status === "ON_THE_WAY" && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-900 via-indigo-950 to-purple-900 text-white shadow-lg border border-purple-800/60 relative overflow-hidden animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+            <div className="flex items-start gap-3.5">
+              <div className="relative shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/30 border border-purple-400/40 flex items-center justify-center text-purple-300 shadow-sm">
+                  <Truck className="w-6 h-6 animate-pulse text-purple-300" />
+                </div>
+                <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-purple-950" />
+                </span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500 text-white shadow-xs">
+                    Live Tracking • On The Way
+                  </span>
+                  <span className="text-xs text-purple-200 font-medium">
+                    Dispatched from Local Hub
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-white">
+                  {request.assignedProvider?.name || "Your Specialist"} is on the way to your address!
+                </h3>
+                <p className="text-xs text-purple-200 leading-relaxed max-w-xl">
+                  Technician has departed with diagnostic equipment and genuine spare parts. Estimated arrival: 15–20 mins.
+                </p>
+              </div>
+            </div>
+
+            {request.assignedProvider?.phone && (
+              <a
+                href={`tel:${request.assignedProvider.phone}`}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-purple-50 text-purple-950 font-bold text-xs shadow-md transition-all shrink-0 self-start sm:self-center"
+              >
+                <Phone className="w-4 h-4 text-purple-700" />
+                <span>Call Specialist ({request.assignedProvider.name.split(" ")[0]})</span>
+              </a>
+            )}
+          </div>
         </div>
       )}
 

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -21,6 +21,7 @@ import {
 import StatusBadge from "@/components/StatusBadge";
 import UrgencyBadge from "@/components/UrgencyBadge";
 import StatusTimeline from "@/components/StatusTimeline";
+import { broadcastStatusUpdate, subscribeToStatusUpdates } from "@/lib/realtimeSync";
 
 export default function ProviderRequestActionPage({
   params,
@@ -64,6 +65,25 @@ export default function ProviderRequestActionPage({
 
   useEffect(() => {
     fetchDetail();
+
+    // 1. Instant cross-tab real-time listener
+    const unsubscribe = subscribeToStatusUpdates((event) => {
+      if (event.requestId === id) {
+        fetchDetail();
+      }
+    });
+
+    // 2. Multi-device auto-polling interval
+    const pollInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        fetchDetail();
+      }
+    }, 3500);
+
+    return () => {
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
   }, [id]);
 
   const handleRespond = async (action: "ACCEPT" | "DECLINE") => {
@@ -80,6 +100,12 @@ export default function ProviderRequestActionPage({
         alert(data.error || "Failed to process response");
         return;
       }
+
+      broadcastStatusUpdate({
+        requestId: id,
+        status: action === "ACCEPT" ? "ACCEPTED" : "PENDING",
+        timestamp: new Date().toISOString(),
+      });
 
       if (action === "DECLINE") {
         router.push("/provider");
@@ -113,6 +139,14 @@ export default function ProviderRequestActionPage({
         alert(data.error || "Failed to update status");
         return;
       }
+
+      // Broadcast immediately across all open tabs / windows
+      broadcastStatusUpdate({
+        requestId: id,
+        status: nextStatus,
+        timestamp: new Date().toISOString(),
+        note,
+      });
 
       fetchDetail();
     } catch {

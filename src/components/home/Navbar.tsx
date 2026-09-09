@@ -24,6 +24,7 @@ import {
   Package,
   LogOut,
   Bell,
+  Camera,
 } from "lucide-react";
 import { INDIAN_CITIES } from "@/lib/homeData";
 import LocationSelectorModal from "@/components/location/LocationSelectorModal";
@@ -195,6 +196,18 @@ export default function Navbar({
                 <span>Packages</span>
               </Link>
 
+              {/* 📸 AI Problem Diagnosis */}
+              <Link
+                href="/ai-diagnosis"
+                className="hidden md:flex items-center gap-1.5 h-10 px-3 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 transition-colors shrink-0"
+              >
+                <Camera className="w-3.5 h-3.5 text-indigo-600" />
+                <span>AI Diagnose</span>
+                <span className="bg-indigo-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase leading-none">
+                  New
+                </span>
+              </Link>
+
               {/* HOME+ Membership */}
               <Link
                 href="/membership"
@@ -330,6 +343,15 @@ export default function Navbar({
               <div className="hidden sm:flex items-center gap-1.5 shrink-0">
                 {sessionUser ? (
                   <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => onOpenBooking()}
+                      type="button"
+                      className="h-10 px-3.5 text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-xl border border-brand-200 transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-brand-600" />
+                      <span>Book a Service</span>
+                    </button>
+
                     <Link
                       href={
                         sessionUser.role === "ADMIN"
@@ -373,7 +395,9 @@ export default function Navbar({
                       Sign In
                     </Link>
                     <button
-                      onClick={() => onOpenBooking()}
+                      onClick={() => {
+                        router.push("/login?returnUrl=/services");
+                      }}
                       type="button"
                       className="h-10 px-3.5 sm:px-4 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 active:bg-brand-800 rounded-xl shadow-md shadow-brand-500/25 hover:shadow-brand-500/40 transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98] whitespace-nowrap"
                     >

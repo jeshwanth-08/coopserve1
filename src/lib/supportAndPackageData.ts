@@ -1,4 +1,4 @@
-﻿// Unified Support, Membership, Notifications, Packages and Address Store
+// Unified Support, Membership, Notifications, Packages and Address Store
 
 export interface ServicePackageItem {
   id: string;
@@ -135,7 +135,7 @@ export const MEMBERSHIP_BENEFITS: MembershipBenefit[] = [
   {
     id: "b3",
     title: "Free Doorstep Visits",
-    subtitle: "?0 inspection & diagnosis charge across all 20 service disciplines.",
+    subtitle: "₹0 inspection & diagnosis charge across all 20 service disciplines.",
     icon: "Home",
     highlight: "4 Free Visits/Yr",
   },
@@ -166,7 +166,7 @@ export const MEMBERSHIP_FAQS = [
   },
   {
     q: "How do free service visits work?",
-    a: "Whenever a technician arrives for preliminary inspection or diagnosis, the ?199-?299 doorstep visit fee is waived automatically up to 4 times per membership year.",
+    a: "Whenever a technician arrives for preliminary inspection or diagnosis, the ₹199-₹299 doorstep visit fee is waived automatically up to 4 times per membership year.",
   },
   {
     q: "What is the refund policy on HOME+?",
@@ -270,14 +270,14 @@ export const INITIAL_SUPPORT_TICKETS: SupportTicket[] = [
         sender: "user",
         senderName: "Aarav Mehta",
         timestamp: "Yesterday",
-        text: "Amount of ?499 was debited twice from my HDFC UPI.",
+        text: "Amount of ₹499 was debited twice from my HDFC UPI.",
       },
       {
         id: "m-4",
         sender: "agent",
         senderName: "Vikas (Billing Team)",
         timestamp: "Yesterday at 6:45 PM",
-        text: "Hi Aarav, our payment gateway reconciled the duplicate transaction. The second ?499 has been refunded back to your bank with ARN #8291048201.",
+        text: "Hi Aarav, our payment gateway reconciled the duplicate transaction. The second ₹499 has been refunded back to your bank with ARN #8291048201.",
       },
     ],
   },
@@ -320,7 +320,7 @@ export const INITIAL_NOTIFICATIONS: NotificationData[] = [
     id: "notif-3",
     category: "Payment",
     title: "Cashback Credited",
-    message: "You earned ?150 cashback in your CoopServe Wallet on your last plumbing service.",
+    message: "You earned ₹150 cashback in your CoopServe Wallet on your last plumbing service.",
     timestamp: "Yesterday",
     isRead: true,
     actionLabel: "View Wallet",

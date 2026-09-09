@@ -6,6 +6,7 @@ import { PlusCircle, Search, Filter, AlertTriangle, Calendar, ArrowRight, CheckC
 import StatusBadge from "@/components/StatusBadge";
 import UrgencyBadge from "@/components/UrgencyBadge";
 import { CATEGORIES, REQUEST_STATUS } from "@/lib/constants";
+import { subscribeToStatusUpdates } from "@/lib/realtimeSync";
 
 export default function MemberRequestsListPage() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -38,6 +39,23 @@ export default function MemberRequestsListPage() {
 
   useEffect(() => {
     fetchRequests();
+
+    // 1. Instant cross-tab real-time listener
+    const unsubscribe = subscribeToStatusUpdates(() => {
+      fetchRequests();
+    });
+
+    // 2. Multi-device auto-polling interval
+    const pollInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        fetchRequests();
+      }
+    }, 3500);
+
+    return () => {
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
   }, [statusFilter, categoryFilter, visibilityFilter]);
 
   const filtered = requests.filter((r) => {

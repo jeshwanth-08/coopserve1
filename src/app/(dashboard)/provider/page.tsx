@@ -56,6 +56,7 @@ import {
   JobStatus,
   canTransitionStatus,
 } from "@/lib/providerData";
+import { broadcastStatusUpdate, subscribeToStatusUpdates } from "@/lib/realtimeSync";
 
 function ProviderDashboardContent() {
   const router = useRouter();
@@ -130,6 +131,23 @@ function ProviderDashboardContent() {
 
   useEffect(() => {
     fetchAssignedRequests();
+
+    // 1. Instant cross-tab real-time listener
+    const unsubscribe = subscribeToStatusUpdates(() => {
+      fetchAssignedRequests();
+    });
+
+    // 2. Multi-device auto-polling interval
+    const pollInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        fetchAssignedRequests();
+      }
+    }, 3500);
+
+    return () => {
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
   }, [currentUser]);
 
   const handleRequestRespond = async (requestId: string, action: "ACCEPT" | "DECLINE", reason?: string) => {
@@ -145,6 +163,13 @@ function ProviderDashboardContent() {
         alert(data.error || `Failed to ${action.toLowerCase()} request`);
         return;
       }
+
+      broadcastStatusUpdate({
+        requestId,
+        status: action === "ACCEPT" ? "ACCEPTED" : "PENDING",
+        timestamp: new Date().toISOString(),
+      });
+
       await fetchAssignedRequests();
     } catch (err) {
       alert("Network error processing response");
@@ -171,6 +196,15 @@ function ProviderDashboardContent() {
         alert(data.error || `Failed to update status to ${nextStatus}`);
         return;
       }
+
+      // Broadcast update across tabs immediately
+      broadcastStatusUpdate({
+        requestId,
+        status: nextStatus,
+        timestamp: new Date().toISOString(),
+        note: notes,
+      });
+
       await fetchAssignedRequests();
     } catch (err) {
       alert("Network error updating status");
@@ -501,6 +535,20 @@ function ProviderDashboardContent() {
     });
     setJobs(updated);
     saveProviderJobs(updated);
+
+    // Broadcast live parallel update across tabs
+    broadcastStatusUpdate({
+      requestId: jobId,
+      status: nextStatus,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Also notify backend if this corresponds to a service request
+    fetch(`/api/requests/${jobId}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nextStatus }),
+    }).catch(() => {});
   };
 
   // Reply state for reviews

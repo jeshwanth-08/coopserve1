@@ -30,6 +30,7 @@ import {
   FileCheck2,
   X,
   Compass,
+  Package,
 } from "lucide-react";
 import ServiceLocationMap from "@/components/maps/ServiceLocationMap";
 import Navbar from "@/components/home/Navbar";
@@ -51,6 +52,7 @@ import {
 } from "@/lib/paymentService";
 import SocietyGroupPoolSection from "@/components/booking/SocietyGroupPoolSection";
 import { SocietyPoolItem } from "@/lib/societyPoolService";
+import { CURATED_SERVICE_PACKAGES } from "@/lib/supportAndPackageData";
 
 function BookingPageContent() {
   const params = useParams();
@@ -62,6 +64,17 @@ function BookingPageContent() {
   const proQuery = searchParams.get("pro");
   const dateQuery = searchParams.get("date");
   const slotQuery = searchParams.get("slot");
+  const packageQuery = searchParams.get("package");
+
+  const matchedPackage =
+    CURATED_SERVICE_PACKAGES.find(
+      (p) =>
+        (packageQuery &&
+          (p.slug.toLowerCase() === packageQuery.toLowerCase() ||
+            p.id.toLowerCase() === packageQuery.toLowerCase())) ||
+        p.id.toLowerCase() === serviceId.toLowerCase() ||
+        p.slug.toLowerCase() === serviceId.toLowerCase()
+    ) || null;
 
   const matchingPro = proQuery
     ? TOP_PROFESSIONALS.find(
@@ -72,6 +85,27 @@ function BookingPageContent() {
     : null;
 
   const [service, setService] = useState<ServiceItem>(() => {
+    if (matchedPackage) {
+      return {
+        id: matchedPackage.id,
+        name: matchedPackage.title,
+        slug: matchedPackage.slug,
+        category: "Bundled Service Package",
+        categorySlug: "packages",
+        rating: matchedPackage.rating,
+        reviewsCount: matchedPackage.reviewsCount,
+        bookingsCount: matchedPackage.reviewsCount * 2,
+        price: matchedPackage.packagePrice,
+        originalPrice: matchedPackage.originalPrice,
+        duration: matchedPackage.duration,
+        image: matchedPackage.image,
+        badge: matchedPackage.tag,
+        description: matchedPackage.description,
+        includes: matchedPackage.includedServices.map((s) => `${s.name}: ${s.desc}`),
+        excludes: ["Additional consumables beyond standard package allocation"],
+        isAvailable: true,
+      };
+    }
     if (matchingPro && (!serviceId || serviceId === "svc-1")) {
       return getMatchingServiceForPro(matchingPro);
     }
@@ -80,6 +114,41 @@ function BookingPageContent() {
       (matchingPro ? getMatchingServiceForPro(matchingPro) : POPULAR_SERVICES[0])
     );
   });
+
+  // Synchronize service when package or service query updates
+  React.useEffect(() => {
+    if (matchedPackage) {
+      setService({
+        id: matchedPackage.id,
+        name: matchedPackage.title,
+        slug: matchedPackage.slug,
+        category: "Bundled Service Package",
+        categorySlug: "packages",
+        rating: matchedPackage.rating,
+        reviewsCount: matchedPackage.reviewsCount,
+        bookingsCount: matchedPackage.reviewsCount * 2,
+        price: matchedPackage.packagePrice,
+        originalPrice: matchedPackage.originalPrice,
+        duration: matchedPackage.duration,
+        image: matchedPackage.image,
+        badge: matchedPackage.tag,
+        description: matchedPackage.description,
+        includes: matchedPackage.includedServices.map((s) => `${s.name}: ${s.desc}`),
+        excludes: ["Additional consumables beyond standard package allocation"],
+        isAvailable: true,
+      });
+      setIssueNotes((prev) =>
+        !prev || prev.startsWith("Package Bundle:") || prev.includes("AC regular cleaning")
+          ? `Package Bundle: ${matchedPackage.title} (${matchedPackage.includedServices.map((s) => s.name).join(", ")})`
+          : prev
+      );
+    } else {
+      const found = POPULAR_SERVICES.find((s) => s.id === serviceId || s.slug === serviceId);
+      if (found) {
+        setService(found);
+      }
+    }
+  }, [serviceId, packageQuery]);
 
   // Stepper: 1: Service, 2: Date & Time, 3: Address, 4: Details & Media, 5: Professional, 6: Checkout
   const [currentStep, setCurrentStep] = useState<number>(2); // Default to Step 2 since service was clicked
@@ -105,7 +174,11 @@ function BookingPageContent() {
 
   // Additional Details & Media State
   const [issueNotes, setIssueNotes] = useState(
-    isPrefilled ? "AC regular cleaning & jet spray service" : ""
+    matchedPackage
+      ? `Package Bundle: ${matchedPackage.title} (${matchedPackage.includedServices.map((s) => s.name).join(", ")})`
+      : isPrefilled
+      ? "AC regular cleaning & jet spray service"
+      : ""
   );
   const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([
     "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=300&q=80",
@@ -382,6 +455,34 @@ function BookingPageContent() {
           </div>
         </div>
 
+        {matchedPackage && (
+          <div className="mb-6 p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-brand-700 via-indigo-600 to-brand-600 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in">
+            <div className="flex items-start sm:items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/20">
+                <Package className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full">
+                    {matchedPackage.tag || "Bundled Service Package"}
+                  </span>
+                  <span className="text-xs text-emerald-200 font-bold bg-emerald-500/20 border border-emerald-300/30 px-2 py-0.5 rounded-full">
+                    Save ₹{matchedPackage.savings} instantly
+                  </span>
+                </div>
+                <h2 className="text-lg sm:text-xl font-black">{matchedPackage.title}</h2>
+                <p className="text-xs text-brand-100 max-w-2xl mt-0.5 line-clamp-2">
+                  <strong>Included:</strong> {matchedPackage.includedServices.map((s) => s.name).join(" • ")}
+                </p>
+              </div>
+            </div>
+            <div className="text-left sm:text-right shrink-0 bg-white/10 px-4 py-2.5 rounded-2xl border border-white/15 self-start sm:self-center">
+              <div className="text-2xl font-black">₹{matchedPackage.packagePrice}</div>
+              <div className="text-xs text-brand-200 line-through">₹{matchedPackage.originalPrice}</div>
+            </div>
+          </div>
+        )}
+
         {isPrefilled && (
           <div className="p-4 rounded-2xl bg-teal-50 border border-teal-200 text-teal-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm">
             <div className="flex items-center gap-3">
@@ -433,6 +534,28 @@ function BookingPageContent() {
                   </div>
                   <span className="text-lg font-black text-slate-900">₹{service.price}</span>
                 </div>
+
+                {matchedPackage && (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-800">Included In This Package ({matchedPackage.includedServices.length} Services):</span>
+                      <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                        ₹{matchedPackage.savings} Combined Discount
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      {matchedPackage.includedServices.map((inc, i) => (
+                        <div key={i} className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-xs space-y-1">
+                          <p className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>{inc.name}</span>
+                          </p>
+                          <p className="text-[11px] text-slate-500 leading-relaxed">{inc.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">

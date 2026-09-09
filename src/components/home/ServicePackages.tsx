@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import Link from "next/link";
@@ -98,16 +98,16 @@ export default function ServicePackages({ onOpenBooking }: ServicePackagesProps)
               <div className="p-5 sm:p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                 <div>
                   <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full inline-block mb-1">
-                    Save ?{pkg.savings}
+                    Save ₹{pkg.savings}
                   </span>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-2xl font-black text-slate-900">?{pkg.packagePrice}</span>
-                    <span className="text-xs text-slate-400 line-through">?{pkg.originalPrice}</span>
+                    <span className="text-2xl font-black text-slate-900">₹{pkg.packagePrice}</span>
+                    <span className="text-xs text-slate-400 line-through">₹{pkg.originalPrice}</span>
                   </div>
                 </div>
 
                 <Link
-                  href={`/book/svc-1?package=${pkg.slug}`}
+                  href={`/book/${pkg.id}?package=${pkg.slug}`}
                   className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white text-xs font-bold shadow-md shadow-brand-500/20 transition-all flex items-center gap-1.5"
                 >
                   <span>Book Package</span>
