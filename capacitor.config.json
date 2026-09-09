@@ -1,0 +1,21 @@
+{
+  "appId": "org.coopserve.app",
+  "appName": "CoopServe",
+  "webDir": "out",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://delaware-flux-msgid-components.trycloudflare.com",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000
+    },
+    "Geolocation": {
+      "enableHighAccuracy": true
+    }
+  }
+}

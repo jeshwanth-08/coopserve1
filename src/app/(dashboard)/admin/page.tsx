@@ -36,8 +36,21 @@ import {
   X,
   Sparkles,
   Percent,
+  HeartHandshake,
+  CloudSun,
+  ArrowRightLeft,
+  Thermometer,
+  CloudRain,
 } from "lucide-react";
 import ServiceLocationMap, { COOP_SOCIETY_LOCATIONS } from "@/components/maps/ServiceLocationMap";
+import { getAllInsuranceClaims, updateClaimStatus, InsuranceClaim } from "@/lib/welfareService";
+import {
+  BASE_LOCALITY_DATA,
+  INITIAL_REALLOCATIONS,
+  getWeeklyForecast,
+  LocalityForecast,
+  ReallocationRecommendation,
+} from "@/lib/demandForecasting";
 import {
   AdminBooking,
   AdminBookingStatus,
@@ -89,12 +102,39 @@ function AdminDashboardContent() {
     }
   };
 
+  // Welfare Claims State
+  const [claims, setClaims] = useState<InsuranceClaim[]>([]);
+
+  // Forecasting State
+  const [temperature, setTemperature] = useState(36);
+  const [rainfall, setRainfall] = useState(10);
+  const [localityForecasts, setLocalityForecasts] = useState<LocalityForecast[]>(BASE_LOCALITY_DATA);
+  const [reallocations, setReallocations] = useState<ReallocationRecommendation[]>(INITIAL_REALLOCATIONS);
+  const [reallocationExecuted, setReallocationExecuted] = useState(false);
+
   // Load bookings and coupons and society pools
   useEffect(() => {
     setJobsBookings(getAdminBookings());
     setCoupons(getAdminCoupons());
+    setClaims(getAllInsuranceClaims());
     fetchPools();
   }, []);
+
+  const handleApproveClaim = (claimId: string) => {
+    const updated = updateClaimStatus(claimId, "APPROVED", undefined, "Approved by District Cooperative Federation Admin");
+    setClaims(updated);
+  };
+
+  const handleDisburseClaim = (claimId: string) => {
+    const updated = updateClaimStatus(claimId, "DISBURSED", undefined, "Settled via Instant UPI Direct Benefit Transfer");
+    setClaims(updated);
+  };
+
+  const handleExecuteReallocation = () => {
+    setReallocations((prev) => prev.map((r) => ({ ...r, status: "EXECUTED" })));
+    setReallocationExecuted(true);
+    setTimeout(() => setReallocationExecuted(false), 5000);
+  };
 
   // Booking table search, filter, sort, pagination
   const [searchQuery, setSearchQuery] = useState("");
@@ -233,6 +273,8 @@ function AdminDashboardContent() {
 
   const ADMIN_NAV_TABS = [
     { id: "overview", label: "Overview & Metrics", icon: BarChart3 },
+    { id: "forecasting", label: "AI Demand & Allocation", icon: TrendingUp },
+    { id: "welfare", label: "Welfare & Claims", badge: claims.filter((c) => c.status !== "DISBURSED").length, icon: HeartHandshake },
     { id: "bookings", label: "Bookings", badge: bookings.length, icon: Calendar },
     { id: "grouppools", label: "Society Service Pools", badge: pools.length, icon: Building },
     { id: "customers", label: "Users & Customers", icon: Users },
@@ -1170,6 +1212,463 @@ function AdminDashboardContent() {
           </div>
           <div className="p-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center text-xs text-slate-600">
             Platform monitoring is active for {activeTab}. All SLAs are operating within target benchmarks.
+          </div>
+        </div>
+      )}
+
+      {/* 10. PREDICTIVE AI DEMAND FORECASTING & AUTO-ALLOCATION */}
+      {activeTab === "forecasting" && (
+        <div className="space-y-6 animate-in fade-in">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-cyan-900 via-sky-900 to-indigo-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+            <div className="absolute right-0 top-0 w-80 h-80 bg-cyan-400/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-400/20 text-cyan-200 text-xs font-bold border border-cyan-300/30">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>SIH 2026 Smart Automation Engine</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                  Predictive AI Demand Forecasting & Auto-Allocation
+                </h2>
+                <p className="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
+                  Time-series demand models correlated with localized heatwave & monsoon triggers. Automatically balances worker surplus/deficit across cooperative federations with dynamic incentive bonuses.
+                </p>
+              </div>
+
+              {/* Quick Summary Pill */}
+              <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-4 flex items-center gap-4 shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-cyan-500/30 flex items-center justify-center text-cyan-300">
+                  <TrendingUp className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="text-[11px] font-medium text-slate-300">Predicted 7-Day Volume</div>
+                  <div className="text-2xl font-black text-white">
+                    {getWeeklyForecast(temperature, rainfall).reduce((acc, d) => acc + d.totalPredicted, 0)} Jobs
+                  </div>
+                  <div className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                    <span>↑ +28.4% vs last week</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Weather / Climate Simulation Sliders */}
+            <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="flex items-center gap-1.5 text-amber-300">
+                    <Thermometer className="w-4 h-4" /> Ambient Temperature (Heatwave Factor)
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-amber-400/20 text-amber-200">
+                    {temperature}°C {temperature >= 36 && "🔥 High Heatwave Alert"}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={25}
+                  max={45}
+                  value={temperature}
+                  onChange={(e) => setTemperature(Number(e.target.value))}
+                  className="w-full accent-amber-400 cursor-pointer h-2 bg-slate-700 rounded-lg"
+                />
+                <div className="text-[10px] text-slate-400 flex justify-between">
+                  <span>25°C (Normal)</span>
+                  <span className="text-amber-300 font-medium">Affects AC Repair & Fan demand (+5% per °C)</span>
+                  <span>45°C (Extreme)</span>
+                </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="flex items-center gap-1.5 text-blue-300">
+                    <CloudRain className="w-4 h-4" /> Rainfall Intensity (Monsoon Factor)
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-blue-400/20 text-blue-200">
+                    {rainfall} mm {rainfall >= 25 && "⛈️ Heavy Downpour Alert"}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={80}
+                  value={rainfall}
+                  onChange={(e) => setRainfall(Number(e.target.value))}
+                  className="w-full accent-blue-400 cursor-pointer h-2 bg-slate-700 rounded-lg"
+                />
+                <div className="text-[10px] text-slate-400 flex justify-between">
+                  <span>0 mm (Dry)</span>
+                  <span className="text-blue-300 font-medium">Affects Plumbing & Water Motor demand (+4% per mm)</span>
+                  <span>80 mm (Flood Risk)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 7-Day Time-Series Demand Bar Chart */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">7-Day Projected Service Demand Velocity</h3>
+                <p className="text-xs text-slate-500">
+                  AI predictions combining 30-day moving average, weekend spikes, and live weather triggers.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 text-[11px] font-semibold text-slate-500">
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-cyan-500"></span> AC Repair</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500"></span> Electrical</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500"></span> Plumbing</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500"></span> Cleaning</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-7 gap-2 sm:gap-4 pt-4">
+              {getWeeklyForecast(temperature, rainfall).map((day) => {
+                const maxVal = 400;
+                const heightPct = Math.min(100, Math.round((day.totalPredicted / maxVal) * 100));
+                const isPeak = day.day === "Sat" || day.day === "Sun";
+                return (
+                  <div
+                    key={day.day}
+                    className={`rounded-2xl p-3 flex flex-col items-center justify-between border transition-all ${
+                      isPeak
+                        ? "bg-amber-50/60 border-amber-200 ring-1 ring-amber-300"
+                        : "bg-slate-50/80 border-slate-200 hover:border-cyan-300"
+                    }`}
+                  >
+                    <div className="text-center space-y-0.5">
+                      <span className="text-xs font-black text-slate-900">{day.day}</span>
+                      <p className="text-[10px] text-slate-500">{day.date}</p>
+                    </div>
+
+                    {/* Progress Bar Visualization */}
+                    <div className="w-full bg-slate-200 rounded-full h-24 flex flex-col justify-end p-1 my-2">
+                      <div
+                        className="w-full rounded-xl bg-gradient-to-t from-cyan-600 to-indigo-500 transition-all duration-500"
+                        style={{ height: `${Math.max(15, heightPct)}%` }}
+                      />
+                    </div>
+
+                    <div className="text-center">
+                      <span className="text-sm font-black text-slate-900">{day.totalPredicted}</span>
+                      <p className="text-[9px] text-slate-500">bookings</p>
+                    </div>
+
+                    <div className="w-full pt-2 border-t border-slate-200/60 mt-2 space-y-0.5 text-[9px] text-slate-600">
+                      <div className="flex justify-between">
+                        <span>AC:</span> <span className="font-bold text-cyan-700">{day.acRepair}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Plumb:</span> <span className="font-bold text-blue-700">{day.plumbing}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Locality Matrix & Automated Reallocation */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Locality Deficit/Surplus Matrix */}
+            <div className="lg:col-span-2 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">Locality Deficit vs. Surplus Matrix</h3>
+                  <p className="text-xs text-slate-500">
+                    Real-time workforce availability against projected 48-hour service load.
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+                  6 Hubs Monitored
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100 uppercase tracking-wider text-[10px]">
+                    <tr>
+                      <th className="py-3 px-4">Locality Hub</th>
+                      <th className="py-3 px-3">Primary Demand</th>
+                      <th className="py-3 px-3">Active / Needed</th>
+                      <th className="py-3 px-3">Surplus / Deficit</th>
+                      <th className="py-3 px-4">Weather / Demand Factor</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {localityForecasts.map((loc) => {
+                      const isDeficit = loc.deficitOrSurplus < 0;
+                      return (
+                        <tr key={loc.locality} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3.5 px-4 font-bold text-slate-900 flex items-center gap-2">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                            {loc.locality}
+                          </td>
+                          <td className="py-3.5 px-3">
+                            <span className="font-semibold text-slate-700">{loc.primaryDiscipline}</span>
+                            <div className="text-[10px] text-cyan-700 font-bold">
+                              +{loc.surgePercentage}% Surge
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-3">
+                            <span className="font-bold text-slate-900">{loc.activeSpecialists}</span>
+                            <span className="text-slate-400"> / {loc.requiredSpecialists}</span>
+                          </td>
+                          <td className="py-3.5 px-3">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                                isDeficit
+                                  ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              }`}
+                            >
+                              {isDeficit ? `Deficit: ${loc.deficitOrSurplus}` : `Surplus: +${loc.deficitOrSurplus}`}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-600 text-[11px]">
+                            {loc.weatherFactor}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Auto-Allocation Recommendation Engine */}
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 border border-slate-800 shadow-xl space-y-5 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ArrowRightLeft className="w-5 h-5 text-cyan-400" />
+                    <h3 className="font-black text-white text-base">Federation Auto-Balancing</h3>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
+                    AI Automated
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300">
+                  Transfers spare cooperative specialists from low-demand societies to deficit zones with dynamic surge stipends.
+                </p>
+
+                {reallocationExecuted && (
+                  <div className="p-3 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl text-xs text-emerald-300 flex items-center gap-2 animate-in fade-in">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Transfers broadcasted! Worker apps updated with dynamic surge incentives.</span>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {reallocations.map((rec) => (
+                    <div
+                      key={rec.id}
+                      className="bg-white/5 border border-white/10 rounded-2xl p-3.5 space-y-2 hover:bg-white/10 transition-colors"
+                    >
+                      <div className="flex items-center justify-between text-xs font-bold">
+                        <span className="text-cyan-300 flex items-center gap-1.5">
+                          <span>{rec.sourceLocality}</span>
+                          <span>→</span>
+                          <span className="text-white">{rec.targetLocality}</span>
+                        </span>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                            rec.status === "EXECUTED"
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                              : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                          }`}
+                        >
+                          {rec.status}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-300">
+                        Transfer <strong className="text-white">{rec.recommendedTransfers} {rec.discipline}</strong> specialists.
+                      </div>
+                      <p className="text-[10px] text-slate-400 leading-snug">{rec.reason}</p>
+                      <div className="flex items-center justify-between pt-1 text-[10px] text-emerald-300 font-semibold border-t border-white/5">
+                        <span>Surge Incentive Bonus:</span>
+                        <span className="bg-emerald-400/20 px-2 py-0.5 rounded text-emerald-200 font-bold">
+                          +₹{rec.incentiveBonusPerJob}/job
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={handleExecuteReallocation}
+                disabled={reallocationExecuted}
+                className={`w-full py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all ${
+                  reallocationExecuted
+                    ? "bg-emerald-600 text-white cursor-default"
+                    : "bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25"
+                }`}
+              >
+                {reallocationExecuted ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Allocations Dispatched</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowRightLeft className="w-4 h-4" />
+                    <span>Execute Federation Reallocation</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 11. WORKER WELFARE & SOCIAL SECURITY (e-SHRAM & CLAIMS) */}
+      {activeTab === "welfare" && (
+        <div className="space-y-6 animate-in fade-in">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+            <div className="absolute right-0 top-0 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-400/20 text-emerald-200 text-xs font-bold border border-emerald-300/30">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>SIH 2026 Core Cooperative Pillar</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                  Worker Welfare, e-Shram & Social Security
+                </h2>
+                <p className="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
+                  National e-Shram database integration, autonomous 5% Welfare Fund escrow, and on-duty micro-insurance claim settlements via Direct Benefit Transfer (DBT).
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/provider/welfare"
+                  target="_blank"
+                  className="px-4 py-2.5 rounded-2xl bg-white text-emerald-950 font-bold text-xs hover:bg-emerald-50 transition-colors shadow-lg flex items-center gap-2"
+                >
+                  <HeartHandshake className="w-4 h-4 text-emerald-700" />
+                  <span>Open Provider Welfare Portal ↗</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Metrics Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/10">
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                <span className="text-[11px] text-emerald-200 font-medium">Cooperative Welfare Fund</span>
+                <div className="text-2xl font-black text-white mt-1">₹1,84,500</div>
+                <span className="text-[10px] text-emerald-400 font-semibold">5% contribution on 2,340 jobs</span>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                <span className="text-[11px] text-emerald-200 font-medium">e-Shram UAN Verified</span>
+                <div className="text-2xl font-black text-white mt-1">86 / 88</div>
+                <span className="text-[10px] text-emerald-400 font-semibold">97.7% national compliance</span>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                <span className="text-[11px] text-emerald-200 font-medium">Group Accidental Cover</span>
+                <div className="text-2xl font-black text-white mt-1">₹5,00,000</div>
+                <span className="text-[10px] text-slate-300">Active policy for all active pros</span>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                <span className="text-[11px] text-emerald-200 font-medium">Claims Settled (DBT)</span>
+                <div className="text-2xl font-black text-white mt-1">
+                  {claims.filter((c) => c.status === "DISBURSED").length} / {claims.length}
+                </div>
+                <span className="text-[10px] text-emerald-400 font-semibold">Avg 4-hour settlement</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Claims Table */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Worker Welfare & Micro-Insurance Claims</h3>
+                <p className="text-xs text-slate-500">
+                  Review on-duty incident reports, cashless hospital admission authorizations, and disburse relief funds.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+                {claims.length} Total Claims
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100 uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="py-3 px-4">Claim ID & Worker</th>
+                    <th className="py-3 px-3">e-Shram UAN</th>
+                    <th className="py-3 px-3">Incident & Category</th>
+                    <th className="py-3 px-3">Claim Amount</th>
+                    <th className="py-3 px-3">Status</th>
+                    <th className="py-3 px-4 text-right">Federation Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {claims.map((claim) => (
+                    <tr key={claim.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-slate-900">{claim.providerName}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">#{claim.id} • {claim.trade}</div>
+                      </td>
+                      <td className="py-3.5 px-3 font-mono text-slate-700">
+                        {claim.providerId}
+                      </td>
+                      <td className="py-3.5 px-3 max-w-xs">
+                        <span className="font-semibold text-slate-900 capitalize">{claim.incidentType.toLowerCase().replace(/_/g, " ")}</span>
+                        <p className="text-[11px] text-slate-500 truncate">{claim.description}</p>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className="font-black text-slate-900 text-sm">
+                          ₹{claim.amountClaimed.toLocaleString("en-IN")}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                            claim.status === "DISBURSED"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : claim.status === "APPROVED"
+                              ? "bg-blue-50 text-blue-700 border border-blue-200"
+                              : claim.status === "REJECTED"
+                              ? "bg-rose-50 text-rose-700 border border-rose-200"
+                              : "bg-amber-50 text-amber-700 border border-amber-200"
+                          }`}
+                        >
+                          {claim.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right space-x-2">
+                        {claim.status === "SUBMITTED" && (
+                          <button
+                            onClick={() => handleApproveClaim(claim.id)}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700 transition-colors"
+                          >
+                            Approve
+                          </button>
+                        )}
+                        {claim.status === "APPROVED" && (
+                          <button
+                            onClick={() => handleDisburseClaim(claim.id)}
+                            className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold text-[11px] hover:bg-indigo-700 transition-colors shadow-sm"
+                          >
+                            Disburse via DBT
+                          </button>
+                        )}
+                        {claim.status === "DISBURSED" && (
+                          <span className="text-[11px] text-emerald-700 font-bold flex items-center justify-end gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Disbursed
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

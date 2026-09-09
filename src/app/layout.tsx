@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import HomeBuddyWidget from "@/components/ai/HomeBuddyWidget";
 import AuthProvider from "@/components/providers/AuthProvider";
+import { LanguageProvider } from "@/lib/i18nContext";
 
 export const metadata: Metadata = {
   title: "CoopServe - Professional Home Services & Maintenance",
@@ -16,11 +17,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full w-full max-w-full overflow-x-hidden">
       <body className="min-h-full w-full max-w-full overflow-x-hidden flex flex-col antialiased bg-slate-50 text-slate-900 selection:bg-brand-500 selection:text-white">
-        <AuthProvider>
-          {children}
-          {/* Global Native AI Assistant: Home Buddy */}
-          <HomeBuddyWidget />
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            {children}
+            {/* Global Native AI Assistant: Home Buddy */}
+            <HomeBuddyWidget />
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

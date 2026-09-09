@@ -14,6 +14,7 @@ import {
   Clock,
 } from "lucide-react";
 import { ServiceItem, POPULAR_SERVICES } from "@/lib/homeData";
+import { useLanguage } from "@/lib/i18nContext";
 
 interface HeroSearchProps {
   selectedCity: string;
@@ -83,6 +84,8 @@ export default function HeroSearch({
   onOpenBooking,
   onSelectCategory,
 }: HeroSearchProps) {
+  const { t } = useLanguage();
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-brand-50/70 via-white to-slate-50 pt-5 sm:pt-8 pb-8 sm:pb-12 border-b border-slate-200/70">
       {/* Background ambient gradient blurs */}
@@ -105,13 +108,13 @@ export default function HeroSearch({
             {/* Main Headline */}
             <div className="space-y-1.5">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-[1.1]">
-                Your home. <br />
+                {t("hero.title_prefix", "Your home.")} <br />
                 <span className="bg-gradient-to-r from-brand-600 via-indigo-600 to-amber-500 bg-clip-text text-transparent">
-                  Taken care of.
+                  {t("hero.title_highlight", "Taken care of.")}
                 </span>
               </h1>
               <p className="text-sm sm:text-base text-slate-600 font-normal max-w-xl leading-relaxed">
-                Book trusted professionals for everything your home needs — from a quick repair to a complete makeover.
+                {t("hero.subtitle", "Book trusted professionals for everything your home needs — from a quick repair to a complete makeover.")}
               </p>
             </div>
 

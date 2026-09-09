@@ -25,9 +25,13 @@ import {
   LogOut,
   Bell,
   Camera,
+  Download,
+  HeartHandshake,
 } from "lucide-react";
 import { INDIAN_CITIES } from "@/lib/homeData";
 import LocationSelectorModal from "@/components/location/LocationSelectorModal";
+import LanguageSwitcher from "@/components/common/LanguageSwitcher";
+import { useLanguage } from "@/lib/i18nContext";
 
 interface NavbarProps {
   selectedCity: string;
@@ -49,6 +53,7 @@ export default function Navbar({
   onSignOut,
 }: NavbarProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [isScrolled, setIsScrolled] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showDemoMenu, setShowDemoMenu] = useState(false);
@@ -193,7 +198,7 @@ export default function Navbar({
                 className="hidden xl:flex items-center gap-1.5 h-10 px-3 rounded-xl text-xs font-semibold text-slate-700 hover:text-brand-600 hover:bg-slate-50 transition-colors shrink-0"
               >
                 <Package className="w-3.5 h-3.5 text-brand-600" />
-                <span>Packages</span>
+                <span>{t("nav.packages", "Packages")}</span>
               </Link>
 
               {/* 📸 AI Problem Diagnosis */}
@@ -202,10 +207,30 @@ export default function Navbar({
                 className="hidden md:flex items-center gap-1.5 h-10 px-3 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 transition-colors shrink-0"
               >
                 <Camera className="w-3.5 h-3.5 text-indigo-600" />
-                <span>AI Diagnose</span>
+                <span>{t("nav.ai_diagnosis", "AI Diagnose")}</span>
                 <span className="bg-indigo-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase leading-none">
                   New
                 </span>
+              </Link>
+
+              {/* 🛡️ Worker Welfare & e-Shram Portal */}
+              <Link
+                href="/provider/welfare"
+                className="hidden lg:flex items-center gap-1.5 h-10 px-3 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 transition-colors shrink-0"
+                title="Worker Welfare Fund & e-Shram Integration"
+              >
+                <HeartHandshake className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{t("nav.welfare", "Welfare & e-Shram")}</span>
+              </Link>
+
+              {/* 📱 Standalone Android App Download */}
+              <Link
+                href="/download/app"
+                className="hidden xl:flex items-center gap-1.5 h-10 px-3 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors shrink-0"
+                title="Download Standalone Android App (.APK)"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-600" />
+                <span>APK</span>
               </Link>
 
               {/* HOME+ Membership */}
@@ -218,14 +243,10 @@ export default function Navbar({
                 <span className="bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase leading-none">VIP</span>
               </Link>
 
-              {/* Help & Support */}
-              <Link
-                href="/support"
-                className="hidden xl:flex items-center gap-1.5 h-10 px-3 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shrink-0"
-              >
-                <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
-                <span>Support</span>
-              </Link>
+              {/* Multilingual Language Switcher */}
+              <div className="hidden sm:block shrink-0">
+                <LanguageSwitcher variant="navbar" />
+              </div>
 
               {/* Notifications Bell */}
               <Link
@@ -449,18 +470,40 @@ export default function Navbar({
               <span className="text-brand-600 text-xs font-semibold">Change</span>
             </button>
 
-            <div className="grid grid-cols-2 gap-2 pt-2">
+            {/* Mobile Language Switcher */}
+            <LanguageSwitcher variant="mobile" />
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <Link
                 href="/login"
                 className="w-full py-2.5 text-center text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl"
               >
-                Sign In
+                {t("nav.login", "Sign In")}
               </Link>
               <Link
                 href="/register"
                 className="w-full py-2.5 text-center text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-sm shadow-brand-500/20"
               >
-                Join CoopServe
+                {t("nav.register", "Join CoopServe")}
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                href="/provider/welfare"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5"
+              >
+                <HeartHandshake className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Welfare & e-Shram</span>
+              </Link>
+              <Link
+                href="/download/app"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold flex items-center justify-center gap-1.5"
+              >
+                <Download className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Download .APK</span>
               </Link>
             </div>
 
