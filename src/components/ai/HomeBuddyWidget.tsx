@@ -22,7 +22,11 @@ import {
   Zap,
   Check,
 } from "lucide-react";
-import { AiDiagnosisResult } from "@/lib/aiProblemDetector";
+import {
+  AiDiagnosisResult,
+  SAMPLE_ISSUE_PRESETS,
+  SampleIssuePreset,
+} from "@/lib/aiProblemDetector";
 
 interface Message {
   id: string;
@@ -50,40 +54,14 @@ interface Message {
   isEmergency?: boolean;
 }
 
-const SAMPLE_DEFECTS = [
-  {
-    id: "pipe-leak",
-    title: "Leaking Pipe Joint",
-    icon: Droplets,
-    badge: "Plumbing",
-    thumb: "https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&w=400&q=80",
-    desc: "Persistent dripping from PVC connector under sink",
-  },
-  {
-    id: "sparking-mcb",
-    title: "Tripping MCB Breaker",
-    icon: Zap,
-    badge: "Electrical",
-    thumb: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=400&q=80",
-    desc: "Breaker switch smells burnt and trips upon AC start",
-  },
-  {
-    id: "ac-frost",
-    title: "AC Coil Freezing & Drip",
-    icon: Flame,
-    badge: "HVAC / AC",
-    thumb: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=400&q=80",
-    desc: "Ice frost on evaporator cooling fins and warm airflow",
-  },
-  {
-    id: "ceiling-seepage",
-    title: "Ceiling Seepage & Mold",
-    icon: Droplets,
-    badge: "Waterproofing",
-    thumb: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80",
-    desc: "Yellowish damp patches and peeling paint on ceiling",
-  },
-];
+const SAMPLE_DEFECTS = SAMPLE_ISSUE_PRESETS.map((p) => ({
+  id: p.id,
+  title: p.title,
+  badge: p.category,
+  thumb: p.thumbnail,
+  desc: p.description,
+  diagnosis: p.diagnosis,
+}));
 
 export default function HomeBuddyWidget() {
   const router = useRouter();
@@ -184,7 +162,13 @@ export default function HomeBuddyWidget() {
     }
   };
 
-  const handleRunPhotoDiagnosis = async (options: { sampleId?: string; imageBase64?: string; title: string; thumb?: string }) => {
+  const handleRunPhotoDiagnosis = async (options: {
+    sampleId?: string;
+    imageBase64?: string;
+    title: string;
+    thumb?: string;
+    presetDiagnosis?: AiDiagnosisResult;
+  }) => {
     setShowPhotoDiagnosis(false);
     setIsDiagnosing(true);
 
@@ -205,13 +189,17 @@ export default function HomeBuddyWidget() {
         body: JSON.stringify({
           samplePresetId: options.sampleId,
           imageBase64: options.imageBase64,
+          userNotes: options.title,
+          fileName: options.title,
           apiKey: activeApiKey || undefined,
         }),
       });
 
       const data = await res.json();
-      if (data.success && data.diagnosis) {
-        const diag: AiDiagnosisResult = data.diagnosis;
+      const diag: AiDiagnosisResult | undefined =
+        data.success && data.diagnosis ? data.diagnosis : options.presetDiagnosis;
+
+      if (diag) {
         const botMsg: Message = {
           id: "b-" + Date.now(),
           sender: "bot",
@@ -236,14 +224,31 @@ export default function HomeBuddyWidget() {
         ]);
       }
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
+      if (options.presetDiagnosis) {
+        const diag = options.presetDiagnosis;
+        const botMsg: Message = {
           id: "b-" + Date.now(),
           sender: "bot",
-          text: "Connection to AI Vision Service timed out. Please try again or test an instant sample issue.",
-        },
-      ]);
+          text: `🔍 AI Visual Analysis Complete: **${diag.problemTitle}**`,
+          imageThumbnail: options.thumb,
+          visualDiagnosis: diag,
+          safetyTip: diag.actionableTip || diag.urgencyAdvice,
+          action: {
+            label: `Book ${diag.recommendedService.name} (from ₹${diag.recommendedService.startingPrice})`,
+            url: diag.bookingUrl || `/book/${diag.recommendedService.id}`,
+          },
+        };
+        setMessages((prev) => [...prev, botMsg]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: "b-" + Date.now(),
+            sender: "bot",
+            text: "Connection to AI Vision Service timed out. Please try again or test an instant sample issue.",
+          },
+        ]);
+      }
     } finally {
       setIsTyping(false);
       setIsDiagnosing(false);
@@ -482,35 +487,33 @@ export default function HomeBuddyWidget() {
                   Or Test with Sample Issue:
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {SAMPLE_DEFECTS.map((sample) => {
-                    const Icon = sample.icon;
-                    return (
-                      <button
-                        key={sample.id}
-                        onClick={() =>
-                          handleRunPhotoDiagnosis({
-                            sampleId: sample.id,
-                            title: sample.title,
-                            thumb: sample.thumb,
-                          })
-                        }
-                        className="text-left p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-2 transition-colors group"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={sample.thumb}
-                          alt={sample.title}
-                          className="w-8 h-8 rounded-lg object-cover shrink-0"
-                        />
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-bold text-white truncate group-hover:text-cyan-300">
-                            {sample.title}
-                          </p>
-                          <p className="text-[9px] text-cyan-300/80">{sample.badge}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
+                  {SAMPLE_DEFECTS.map((sample) => (
+                    <button
+                      key={sample.id}
+                      onClick={() =>
+                        handleRunPhotoDiagnosis({
+                          sampleId: sample.id,
+                          title: sample.title,
+                          thumb: sample.thumb,
+                          presetDiagnosis: sample.diagnosis,
+                        })
+                      }
+                      className="text-left p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-2 transition-colors group"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={sample.thumb}
+                        alt={sample.title}
+                        className="w-8 h-8 rounded-lg object-cover shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-white truncate group-hover:text-cyan-300">
+                          {sample.title}
+                        </p>
+                        <p className="text-[9px] text-cyan-300/80">{sample.badge}</p>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
