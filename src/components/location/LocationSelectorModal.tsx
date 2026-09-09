@@ -15,6 +15,7 @@ import {
   X,
   Sparkles,
   MapPinOff,
+  Loader2,
 } from "lucide-react";
 import { INDIAN_CITIES } from "@/lib/homeData";
 import { INITIAL_ADDRESSES, SavedAddress } from "@/lib/supportAndPackageData";
@@ -37,6 +38,7 @@ export default function LocationSelectorModal({
   const [activeTab, setActiveTab] = useState<"cities" | "addresses">("cities");
   const [searchAreaQuery, setSearchAreaQuery] = useState("");
   const [isDetectingGps, setIsDetectingGps] = useState(false);
+  const [gpsStatusMessage, setGpsStatusMessage] = useState<string | null>(null);
   const [addresses, setAddresses] = useState<SavedAddress[]>(INITIAL_ADDRESSES);
 
   // Load saved addresses from localStorage if available
@@ -66,11 +68,79 @@ export default function LocationSelectorModal({
 
   const handleDetectGps = () => {
     setIsDetectingGps(true);
-    setTimeout(() => {
+    setGpsStatusMessage("Acquiring device GPS coordinates...");
+
+    const resolveWithCoords = async (latitude?: number, longitude?: number) => {
+      try {
+        setGpsStatusMessage("Resolving locality via OpenStreetMap...");
+        const res = await fetch("/api/location/reverse-geocode", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ latitude, longitude }),
+        });
+        const data = await res.json();
+
+        if (data.success && data.city && data.locality) {
+          setGpsStatusMessage(`✓ Located: ${data.locality}, ${data.city}`);
+          onSelectLocation(data.city, data.locality);
+
+          // Save to recent addresses as GPS Location
+          try {
+            const gpsAddr: SavedAddress = {
+              id: "addr-gps-" + Date.now(),
+              type: "Other",
+              flatNo: "Current GPS Location",
+              street: data.formattedAddress?.split(",").slice(0, 2).join(",") || "Doorstep Pinpoint",
+              locality: data.locality,
+              city: data.city,
+              pincode: data.postcode || "560001",
+              isDefault: false,
+            };
+            const updated = [gpsAddr, ...addresses.filter((a) => !a.id.startsWith("addr-gps-"))].slice(0, 8);
+            setAddresses(updated);
+            localStorage.setItem("coopserve_saved_addresses", JSON.stringify(updated));
+          } catch (e) {
+            console.warn("Could not save GPS address:", e);
+          }
+
+          setTimeout(() => {
+            setIsDetectingGps(false);
+            setGpsStatusMessage(null);
+            onClose();
+          }, 700);
+          return;
+        }
+      } catch (err) {
+        console.error("Reverse geocoding failed:", err);
+      }
+
+      // Safe fallback if API error
+      onSelectLocation("Bengaluru", "Indiranagar (GPS Area)");
       setIsDetectingGps(false);
-      onSelectLocation("Bengaluru", "Indiranagar (Current GPS)");
+      setGpsStatusMessage(null);
       onClose();
-    }, 900);
+    };
+
+    if (typeof window !== "undefined" && "geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolveWithCoords(position.coords.latitude, position.coords.longitude);
+        },
+        (error) => {
+          console.warn("Browser GPS unavailable or denied, falling back to IP geolocation:", error.message);
+          setGpsStatusMessage("GPS access unavailable. Detecting via network IP...");
+          resolveWithCoords();
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 7000,
+          maximumAge: 30000,
+        }
+      );
+    } else {
+      setGpsStatusMessage("Detecting via network IP...");
+      resolveWithCoords();
+    }
   };
 
   const handleSaveAddress = (e: React.FormEvent) => {
@@ -178,21 +248,46 @@ export default function LocationSelectorModal({
         <button
           onClick={handleDetectGps}
           disabled={isDetectingGps}
-          className="w-full p-3.5 mb-5 rounded-2xl bg-brand-50 hover:bg-brand-100/80 border border-brand-200 text-brand-700 flex items-center justify-between transition-all group"
+          type="button"
+          className={`w-full p-3.5 mb-5 rounded-2xl border text-brand-700 flex items-center justify-between transition-all group ${
+            isDetectingGps
+              ? "bg-brand-100/70 border-brand-300 ring-2 ring-brand-400/30"
+              : "bg-brand-50 hover:bg-brand-100/80 border-brand-200"
+          }`}
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-brand-600 text-white flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Navigation className="w-4 h-4" />
+            <div
+              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-transform ${
+                isDetectingGps
+                  ? "bg-brand-700 text-white animate-pulse"
+                  : "bg-brand-600 text-white group-hover:scale-105"
+              }`}
+            >
+              {isDetectingGps ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Navigation className="w-4 h-4" />
+              )}
             </div>
             <div className="text-left">
               <p className="text-xs font-black text-brand-900">
-                {isDetectingGps ? "Detecting Precise GPS Location..." : "Use Current GPS Location"}
+                {isDetectingGps
+                  ? gpsStatusMessage || "Detecting Precise GPS Location..."
+                  : "Use Current GPS Location"}
               </p>
-              <p className="text-[11px] text-brand-600">Auto-detect via device coordinates</p>
+              <p className="text-[11px] text-brand-600">
+                {isDetectingGps
+                  ? "Accurate doorstep coordinates"
+                  : "Auto-detect via device GPS & OpenStreetMap"}
+              </p>
             </div>
           </div>
-          <span className="text-xs font-bold bg-brand-600 text-white px-2.5 py-1 rounded-lg">
-            Instant
+          <span
+            className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+              isDetectingGps ? "bg-brand-700 text-white animate-pulse" : "bg-brand-600 text-white"
+            }`}
+          >
+            {isDetectingGps ? "Locating..." : "Instant"}
           </span>
         </button>
 
