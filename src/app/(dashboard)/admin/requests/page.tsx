@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -18,6 +18,7 @@ import StatusBadge from "@/components/StatusBadge";
 import UrgencyBadge from "@/components/UrgencyBadge";
 import AssignProviderModal from "@/components/AssignProviderModal";
 import { CATEGORIES, LOCALITIES, REQUEST_STATUS } from "@/lib/constants";
+import { broadcastStatusUpdate, subscribeToStatusUpdates } from "@/lib/realtimeSync";
 
 export default function AdminAllRequestsPage() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -84,6 +85,10 @@ export default function AdminAllRequestsPage() {
 
   useEffect(() => {
     fetchRequests();
+    const unsubscribe = subscribeToStatusUpdates(() => {
+      fetchRequests();
+    });
+    return () => unsubscribe();
   }, [statusFilter, categoryFilter, visibilityFilter, urgencyFilter]);
 
   const handleOpenAssignModal = (req: any) => {
@@ -115,6 +120,11 @@ export default function AdminAllRequestsPage() {
       });
 
       if (res.ok) {
+        broadcastStatusUpdate({
+          requestId: overrideData.requestId,
+          status: overrideData.newStatus,
+          timestamp: new Date().toISOString(),
+        });
         setOverrideData({ ...overrideData, isOpen: false, note: "" });
         fetchRequests();
       } else {

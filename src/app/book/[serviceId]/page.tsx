@@ -244,6 +244,7 @@ function BookingPageContent() {
   );
 
   // Submission State
+  const [createdOrderId, setCreatedOrderId] = useState<string>("BK-849201");
   const [bookingState, setBookingState] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
@@ -343,6 +344,7 @@ function BookingPageContent() {
     setPaymentProcessState("PROCESSING");
 
     const orderId = "BK-" + Math.floor(100000 + Math.random() * 900000);
+    setCreatedOrderId(orderId);
     const payResult = await processRealisticPayment(
       {
         orderId,
@@ -1617,7 +1619,7 @@ function BookingPageContent() {
 
                     <div className="space-y-2 pt-2">
                       <Link
-                        href={`/tracking/BK-849201`}
+                        href={`/tracking/${createdOrderId || activeReceipt?.orderId || "BK-849201"}`}
                         className="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs sm:text-sm shadow-md shadow-brand-500/25 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
                       >
                         <Zap className="w-4 h-4" />

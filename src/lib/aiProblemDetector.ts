@@ -405,9 +405,26 @@ User notes provided: ${userNotes || "None"}`;
     const candidateText =
       data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    if (!candidateText) return null;
-
-    const parsed = JSON.parse(candidateText.trim());
+    let cleanedText = candidateText.trim();
+    if (cleanedText.startsWith("```")) {
+      cleanedText = cleanedText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    }
+    
+    let parsed: any;
+    try {
+      parsed = JSON.parse(cleanedText);
+    } catch {
+      const match = cleanedText.match(/\{[\s\S]*\}/);
+      if (match) {
+        try {
+          parsed = JSON.parse(match[0]);
+        } catch {
+          return null;
+        }
+      } else {
+        return null;
+      }
+    }
     if (parsed.isHouseholdDefect === false) {
       return {
         success: false,

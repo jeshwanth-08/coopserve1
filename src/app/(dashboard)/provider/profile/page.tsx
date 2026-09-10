@@ -99,7 +99,7 @@ export default function ProviderProfilePage() {
 
     try {
       setUploadingCert(true);
-      const res = await fetch("/api/upload", {
+      const res = await fetch("/api/uploads", {
         method: "POST",
         body: formData,
       });

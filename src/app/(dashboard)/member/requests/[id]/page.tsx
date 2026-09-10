@@ -295,7 +295,7 @@ export default function MemberRequestDetailPage({
                 className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-purple-50 text-purple-950 font-bold text-xs shadow-md transition-all shrink-0 self-start sm:self-center"
               >
                 <Phone className="w-4 h-4 text-purple-700" />
-                <span>Call Specialist ({request.assignedProvider.name.split(" ")[0]})</span>
+                <span>Call Specialist ({(request.assignedProvider?.name || "Specialist").split(" ")[0]})</span>
               </a>
             )}
           </div>

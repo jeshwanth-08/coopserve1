@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { useState, useEffect } from 'react';
 import { services } from '@/data/services';
 
@@ -14,8 +14,15 @@ export const SearchModal: React.FC<SearchModalProps> = ({ onClose }) => {
   const [recent, setRecent] = useState<string[]>([]);
 
   useEffect(() => {
-    const stored = localStorage.getItem(recentSearchesKey);
-    if (stored) setRecent(JSON.parse(stored));
+    try {
+      const stored = localStorage.getItem(recentSearchesKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) setRecent(parsed);
+      }
+    } catch {
+      setRecent([]);
+    }
   }, []);
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {

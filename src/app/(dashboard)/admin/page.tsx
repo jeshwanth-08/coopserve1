@@ -84,6 +84,7 @@ import {
   INITIAL_ADMIN_CUSTOMERS,
   INITIAL_ADMIN_PROS,
 } from "@/lib/adminData";
+import { subscribeToStatusUpdates } from "@/lib/realtimeSync";
 
 function AdminDashboardContent() {
   const router = useRouter();
@@ -143,13 +144,21 @@ function AdminDashboardContent() {
 
   // Load bookings and coupons and society pools
   useEffect(() => {
-    setJobsBookings(getAdminBookings());
-    setCoupons(getAdminCoupons());
-    setClaims(getAllInsuranceClaims());
-    setAssistanceRequests(getAllAssistanceRequests());
-    setInvoices(getAllInvoices());
-    setFinancialStats(getCoopFinancialAnalytics());
-    fetchPools();
+    const refreshData = () => {
+      setJobsBookings(getAdminBookings());
+      setCoupons(getAdminCoupons());
+      setClaims(getAllInsuranceClaims());
+      setAssistanceRequests(getAllAssistanceRequests());
+      setInvoices(getAllInvoices());
+      setFinancialStats(getCoopFinancialAnalytics());
+      fetchPools();
+    };
+
+    refreshData();
+    const unsubscribe = subscribeToStatusUpdates(() => {
+      refreshData();
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleApproveClaim = (claimId: string) => {
