@@ -23,6 +23,7 @@ import {
   LogIn,
   ChevronDown,
   ChevronUp,
+  LayoutDashboard,
 } from "lucide-react";
 import { POPULAR_SERVICES, ServiceItem, ProProfile } from "@/lib/homeData";
 
@@ -188,6 +189,23 @@ export default function QuickBookingModal({
     onClose();
   };
 
+  const handleDoneAndViewDashboard = () => {
+    setIsConfirmed(false);
+    setSelectedPro(null);
+    onClose();
+
+    // Determine target dashboard based on authenticated user's role
+    const targetDashboard =
+      currentUser?.role === "PROVIDER"
+        ? "/provider"
+        : currentUser?.role === "ADMIN"
+        ? "/admin"
+        : "/member";
+
+    router.push(targetDashboard);
+    router.refresh();
+  };
+
   const TIME_SLOTS = [
     "08:00 AM - 10:00 AM",
     "10:00 AM - 12:00 PM",
@@ -287,12 +305,25 @@ export default function QuickBookingModal({
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                 <button
-                  onClick={handleReset}
-                  className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/20 transition-all"
+                  type="button"
+                  onClick={handleDoneAndViewDashboard}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-bold text-xs shadow-md shadow-brand-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  Done &amp; View Dashboard
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>Done &amp; View Dashboard</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleReset();
+                    router.push("/member/requests");
+                    router.refresh();
+                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>My Bookings</span>
                 </button>
               </div>
             </div>

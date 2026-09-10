@@ -12,6 +12,7 @@ import {
   ArrowRight,
   Download,
   Share2,
+  LayoutDashboard,
 } from "lucide-react";
 import Navbar from "@/components/home/Navbar";
 import Footer from "@/components/home/Footer";
@@ -71,7 +72,7 @@ function BookingConfirmationContent() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
             <Link
               href={`/tracking/${bookingId}`}
               className="py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-brand-500/20 transition-all"
@@ -84,6 +85,13 @@ function BookingConfirmationContent() {
               className="py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 transition-all"
             >
               <span>Manage Booking</span>
+            </Link>
+            <Link
+              href="/member"
+              className="py-3 px-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center gap-2 transition-all border border-emerald-200/60"
+            >
+              <LayoutDashboard className="w-4 h-4 text-emerald-600" />
+              <span>View Dashboard</span>
             </Link>
           </div>
         </div>

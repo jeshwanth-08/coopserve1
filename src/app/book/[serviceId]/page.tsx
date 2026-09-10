@@ -31,6 +31,7 @@ import {
   X,
   Compass,
   Package,
+  LayoutDashboard,
 } from "lucide-react";
 import ServiceLocationMap from "@/components/maps/ServiceLocationMap";
 import Navbar from "@/components/home/Navbar";
@@ -1621,6 +1622,14 @@ function BookingPageContent() {
                       >
                         <Zap className="w-4 h-4" />
                         <span>Track Specialist Live ↗</span>
+                      </Link>
+
+                      <Link
+                        href="/member"
+                        className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <LayoutDashboard className="w-3.5 h-3.5 text-slate-600" />
+                        <span>Go to Member Dashboard</span>
                       </Link>
 
                       <button
