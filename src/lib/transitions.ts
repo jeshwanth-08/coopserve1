@@ -26,6 +26,11 @@ export function validateStatusTransition(
 
   switch (currentStatus) {
     case REQUEST_STATUS.PENDING:
+      if (requestedStatus === REQUEST_STATUS.ACCEPTED) {
+        if (userRole === ROLES.PROVIDER || userRole === ROLES.ADMIN) {
+          return { allowed: true, nextStatus: REQUEST_STATUS.ACCEPTED };
+        }
+      }
       if (requestedStatus === REQUEST_STATUS.ASSIGNED) {
         if (userRole !== ROLES.ADMIN) {
           return { allowed: false, error: "Only coordinators can assign providers to pending requests." };

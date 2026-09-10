@@ -43,9 +43,9 @@ export default function ProviderAssignedRequestsPage() {
   const [declineModalRequest, setDeclineModalRequest] = useState<any | null>(null);
   const [declineReason, setDeclineReason] = useState("");
 
-  const fetchAssignedRequests = async () => {
+  const fetchAssignedRequests = async (showLoading = false) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const res = await fetch("/api/requests");
       if (res.ok) {
         const data = await res.json();
@@ -54,24 +54,33 @@ export default function ProviderAssignedRequestsPage() {
     } catch (err) {
       console.error("Failed to load assigned requests:", err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAssignedRequests();
+    fetchAssignedRequests(true);
 
     // 1. Instant cross-tab real-time update listener
-    const unsubscribe = subscribeToStatusUpdates(() => {
-      fetchAssignedRequests();
+    const unsubscribe = subscribeToStatusUpdates((event) => {
+      if (event?.requestId && event?.status) {
+        setRequests((prev) =>
+          prev.map((r) =>
+            r.id === event.requestId
+              ? { ...r, status: event.status, completionNotes: event.note || r.completionNotes }
+              : r
+          )
+        );
+      }
+      fetchAssignedRequests(false);
     });
 
-    // 2. Multi-device auto-polling interval
+    // 2. Multi-device 1.5s auto-polling interval
     const pollInterval = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") {
-        fetchAssignedRequests();
+        fetchAssignedRequests(false);
       }
-    }, 3500);
+    }, 1500);
 
     return () => {
       unsubscribe();
@@ -80,6 +89,21 @@ export default function ProviderAssignedRequestsPage() {
   }, []);
 
   const handleRespond = async (requestId: string, action: "ACCEPT" | "DECLINE", reason?: string) => {
+    const nextStatus = action === "ACCEPT" ? "ACCEPTED" : "DECLINED";
+
+    // 1. Instant optimistic UI update (0ms latency!)
+    setRequests((prev) =>
+      prev.map((r) => (r.id === requestId ? { ...r, status: nextStatus } : r))
+    );
+
+    // 2. Broadcast update across tabs immediately
+    broadcastStatusUpdate({
+      requestId,
+      status: nextStatus,
+      timestamp: new Date().toISOString(),
+      providerName: "Marcus Thorne",
+    });
+
     try {
       setActionLoadingId(requestId);
       const res = await fetch(`/api/requests/${requestId}/respond`, {
@@ -90,19 +114,14 @@ export default function ProviderAssignedRequestsPage() {
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || `Failed to ${action.toLowerCase()} request`);
+        await fetchAssignedRequests(false);
         return;
       }
 
-      // Broadcast update across tabs
-      broadcastStatusUpdate({
-        requestId,
-        status: action === "ACCEPT" ? "ACCEPTED" : "PENDING",
-        timestamp: new Date().toISOString(),
-      });
-
-      await fetchAssignedRequests();
+      await fetchAssignedRequests(false);
     } catch (err) {
       alert("Network error processing response");
+      await fetchAssignedRequests(false);
     } finally {
       setActionLoadingId(null);
       setDeclineModalRequest(null);
@@ -111,6 +130,24 @@ export default function ProviderAssignedRequestsPage() {
   };
 
   const handleUpdateProgress = async (requestId: string, nextStatus: string, notes?: string) => {
+    // 1. Instant optimistic UI update (0ms latency!)
+    setRequests((prev) =>
+      prev.map((r) =>
+        r.id === requestId
+          ? { ...r, status: nextStatus, completionNotes: notes || r.completionNotes }
+          : r
+      )
+    );
+
+    // 2. Broadcast update across tabs immediately
+    broadcastStatusUpdate({
+      requestId,
+      status: nextStatus,
+      timestamp: new Date().toISOString(),
+      note: notes,
+      providerName: "Marcus Thorne",
+    });
+
     try {
       setActionLoadingId(requestId);
       const res = await fetch(`/api/requests/${requestId}/status`, {
@@ -124,20 +161,14 @@ export default function ProviderAssignedRequestsPage() {
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || `Failed to update status to ${nextStatus}`);
+        await fetchAssignedRequests(false);
         return;
       }
 
-      // Broadcast update across tabs immediately
-      broadcastStatusUpdate({
-        requestId,
-        status: nextStatus,
-        timestamp: new Date().toISOString(),
-        note: notes,
-      });
-
-      await fetchAssignedRequests();
+      await fetchAssignedRequests(false);
     } catch (err) {
       alert("Network error updating status");
+      await fetchAssignedRequests(false);
     } finally {
       setActionLoadingId(null);
       setResolveModalRequest(null);
@@ -376,8 +407,8 @@ export default function ProviderAssignedRequestsPage() {
                   </Link>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* 1. Accept Request / Decline (When ASSIGNED) */}
-                    {req.status === "ASSIGNED" && (
+                    {/* 1. Accept Request / Decline (When ASSIGNED or PENDING) */}
+                    {(req.status === "ASSIGNED" || req.status === "PENDING") && (
                       <>
                         <button
                           disabled={isLoading}

@@ -26,6 +26,7 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { POPULAR_SERVICES, ServiceItem, ProProfile } from "@/lib/homeData";
+import { broadcastStatusUpdate } from "@/lib/realtimeSync";
 
 interface QuickBookingModalProps {
   isOpen: boolean;
@@ -156,7 +157,7 @@ export default function QuickBookingModal({
       setBookingId(generatedId);
 
       try {
-        await fetch("/api/requests", {
+        const res = await fetch("/api/requests", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -167,7 +168,16 @@ export default function QuickBookingModal({
             address: address,
             isEmergency: isEmergency,
             preferredDateTime: new Date().toISOString(),
+            selectedProviderId: selectedPro ? selectedPro.name : undefined,
           }),
+        });
+
+        // Instant broadcast to provider & admin dashboards
+        broadcastStatusUpdate({
+          requestId: generatedId,
+          status: "PENDING",
+          timestamp: new Date().toISOString(),
+          providerName: selectedPro ? selectedPro.name : undefined,
         });
       } catch (err) {
         console.warn("Backend request error:", err);

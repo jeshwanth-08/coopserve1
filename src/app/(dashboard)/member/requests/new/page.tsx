@@ -20,6 +20,7 @@ import {
 import { CATEGORIES, LOCALITIES } from "@/lib/constants";
 import SocietyGroupPoolSection from "@/components/booking/SocietyGroupPoolSection";
 import { SocietyPoolItem } from "@/lib/societyPoolService";
+import { broadcastStatusUpdate } from "@/lib/realtimeSync";
 
 function NewRequestForm() {
   const router = useRouter();
@@ -129,6 +130,12 @@ function NewRequestForm() {
         setLoading(false);
         return;
       }
+
+      broadcastStatusUpdate({
+        requestId: data.request.id,
+        status: data.request.status || "PENDING",
+        timestamp: new Date().toISOString(),
+      });
 
       router.push(`/member/requests/${data.request.id}`);
       router.refresh();

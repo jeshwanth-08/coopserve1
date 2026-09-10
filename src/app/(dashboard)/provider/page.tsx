@@ -122,9 +122,9 @@ function ProviderDashboardContent() {
   const [declineModalRequest, setDeclineModalRequest] = useState<any | null>(null);
   const [declineReason, setDeclineReason] = useState("");
 
-  const fetchAssignedRequests = async () => {
+  const fetchAssignedRequests = async (showLoading = false) => {
     try {
-      setRequestsLoading(true);
+      if (showLoading) setRequestsLoading(true);
       const res = await fetch("/api/requests");
       if (res.ok) {
         const data = await res.json();
@@ -133,24 +133,34 @@ function ProviderDashboardContent() {
     } catch (err) {
       console.error("Failed to load assigned requests:", err);
     } finally {
-      setRequestsLoading(false);
+      if (showLoading) setRequestsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAssignedRequests();
+    fetchAssignedRequests(true);
 
-    // 1. Instant cross-tab real-time listener
-    const unsubscribe = subscribeToStatusUpdates(() => {
-      fetchAssignedRequests();
+    // 1. Instant cross-tab & in-tab real-time listener
+    const unsubscribe = subscribeToStatusUpdates((event) => {
+      if (event?.requestId && event?.status) {
+        // Immediate local state update from event
+        setAssignedRequests((prev) =>
+          prev.map((r) =>
+            r.id === event.requestId
+              ? { ...r, status: event.status, completionNotes: event.note || r.completionNotes }
+              : r
+          )
+        );
+      }
+      fetchAssignedRequests(false);
     });
 
-    // 2. Multi-device auto-polling interval
+    // 2. High-frequency 1.5s background polling for instant sync
     const pollInterval = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") {
-        fetchAssignedRequests();
+        fetchAssignedRequests(false);
       }
-    }, 3500);
+    }, 1500);
 
     return () => {
       unsubscribe();
@@ -159,6 +169,21 @@ function ProviderDashboardContent() {
   }, [currentUser]);
 
   const handleRequestRespond = async (requestId: string, action: "ACCEPT" | "DECLINE", reason?: string) => {
+    const nextStatus = action === "ACCEPT" ? "ACCEPTED" : "DECLINED";
+
+    // 1. Instant optimistic UI update (0ms latency!)
+    setAssignedRequests((prev) =>
+      prev.map((r) => (r.id === requestId ? { ...r, status: nextStatus } : r))
+    );
+
+    // 2. Broadcast update across tabs immediately
+    broadcastStatusUpdate({
+      requestId,
+      status: nextStatus,
+      timestamp: new Date().toISOString(),
+      providerName: currentUser?.name || "Marcus Thorne",
+    });
+
     try {
       setRequestActionLoadingId(requestId);
       const res = await fetch(`/api/requests/${requestId}/respond`, {
@@ -169,18 +194,15 @@ function ProviderDashboardContent() {
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || `Failed to ${action.toLowerCase()} request`);
+        // Re-fetch on error to revert optimistic state
+        await fetchAssignedRequests(false);
         return;
       }
 
-      broadcastStatusUpdate({
-        requestId,
-        status: action === "ACCEPT" ? "ACCEPTED" : "PENDING",
-        timestamp: new Date().toISOString(),
-      });
-
-      await fetchAssignedRequests();
+      await fetchAssignedRequests(false);
     } catch (err) {
       alert("Network error processing response");
+      await fetchAssignedRequests(false);
     } finally {
       setRequestActionLoadingId(null);
       setDeclineModalRequest(null);
@@ -189,6 +211,24 @@ function ProviderDashboardContent() {
   };
 
   const handleRequestUpdateProgress = async (requestId: string, nextStatus: string, notes?: string) => {
+    // 1. Instant optimistic UI update (0ms latency!)
+    setAssignedRequests((prev) =>
+      prev.map((r) =>
+        r.id === requestId
+          ? { ...r, status: nextStatus, completionNotes: notes || r.completionNotes }
+          : r
+      )
+    );
+
+    // 2. Broadcast update across tabs immediately
+    broadcastStatusUpdate({
+      requestId,
+      status: nextStatus,
+      timestamp: new Date().toISOString(),
+      note: notes,
+      providerName: currentUser?.name || "Marcus Thorne",
+    });
+
     try {
       setRequestActionLoadingId(requestId);
       const res = await fetch(`/api/requests/${requestId}/status`, {
@@ -202,20 +242,14 @@ function ProviderDashboardContent() {
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || `Failed to update status to ${nextStatus}`);
+        await fetchAssignedRequests(false);
         return;
       }
 
-      // Broadcast update across tabs immediately
-      broadcastStatusUpdate({
-        requestId,
-        status: nextStatus,
-        timestamp: new Date().toISOString(),
-        note: notes,
-      });
-
-      await fetchAssignedRequests();
+      await fetchAssignedRequests(false);
     } catch (err) {
       alert("Network error updating status");
+      await fetchAssignedRequests(false);
     } finally {
       setRequestActionLoadingId(null);
       setResolveModalRequest(null);
@@ -887,7 +921,7 @@ function ProviderDashboardContent() {
 
               <div className="flex items-center gap-2 self-start sm:self-center">
                 <button
-                  onClick={fetchAssignedRequests}
+                  onClick={() => fetchAssignedRequests(true)}
                   className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold transition-all flex items-center gap-1.5"
                   title="Refresh member requests from database"
                 >
@@ -992,8 +1026,8 @@ function ProviderDashboardContent() {
                         </Link>
 
                         <div className="flex flex-wrap items-center gap-2">
-                          {/* 1. ASSIGNED: Accept or Decline */}
-                          {req.status === "ASSIGNED" && (
+                          {/* 1. ASSIGNED or PENDING: Accept or Decline */}
+                          {(req.status === "ASSIGNED" || req.status === "PENDING") && (
                             <>
                               <button
                                 disabled={isLoading}
@@ -1302,7 +1336,7 @@ function ProviderDashboardContent() {
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={fetchAssignedRequests}
+                  onClick={() => fetchAssignedRequests(true)}
                   className="px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold transition-all flex items-center gap-1.5"
                 >
                   <RotateCcw className={`w-3.5 h-3.5 ${requestsLoading ? "animate-spin text-blue-600" : "text-slate-500"}`} />
@@ -1405,7 +1439,7 @@ function ProviderDashboardContent() {
                         </Link>
 
                         <div className="flex flex-wrap items-center gap-2">
-                          {req.status === "ASSIGNED" && (
+                          {(req.status === "ASSIGNED" || req.status === "PENDING") && (
                             <>
                               <button
                                 disabled={isLoading}
